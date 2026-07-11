@@ -483,7 +483,7 @@ Ready-to-use copy for launching TimeScope on Product Hunt, Reddit, X/Twitter, Li
 > 🕒 TimeScope — a free, open-source, privacy-first RescueTime alternative for Windows. No cloud, no account, no telemetry. Every second of tracking data stays on your machine. 100% local. 100% yours. ⭐ github.com/EnesAhmet10000/timescope
 
 **Medium (Reddit / LinkedIn):**
-> I built TimeScope, a free and open-source time tracking app for Windows that works like RescueTime — but takes privacy seriously. It automatically tracks which apps (and optionally which website domains) you use, shows a clean local dashboard with categories, goals, and focus sessions — and never sends a single byte to the internet. No keystrokes, no passwords, no screenshots, ever. Everything lives in a local SQLite file you fully control. Would love feedback! 🕒
+> TimeScope, a free and open-source time tracking app for Windows that works like RescueTime — but takes privacy seriously. It automatically tracks which apps (and optionally which website domains) you use, shows a clean local dashboard with categories, goals, and focus sessions — and never sends a single byte to the internet. No keystrokes, no passwords, no screenshots, ever. Everything lives in a local SQLite file you fully control. Would love feedback! 🕒
 
 **Product Hunt tagline:**
 > TimeScope — Track your time, not your privacy. A local-only, open-source RescueTime alternative for Windows.
@@ -497,7 +497,7 @@ Ready-to-use copy for launching TimeScope on Product Hunt, Reddit, X/Twitter, Li
 > 🕒 TimeScope — بديل مجاني ومفتوح المصدر لبرنامج RescueTime، مصمم للخصوصية أولاً. بدون سحابة، بدون حساب، بدون تتبع خفي. كل بياناتك تبقى على جهازك فقط. ⭐ github.com/EnesAhmet10000/timescope
 
 **متوسط (منشور تفصيلي):**
-> بنيت TimeScope، برنامج مجاني ومفتوح المصدر لتتبع الوقت على ويندوز، يشتغل مثل RescueTime لكن يأخذ الخصوصية على محمل الجد. يتتبع تلقائياً التطبيقات التي تستخدمها (والمواقع اختيارياً)، ويعرض لك لوحة تحكم أنيقة فيها تصنيفات وأهداف ووضع تركيز — وكل هذا بدون إرسال أي بيانات للإنترنت أبداً. لا كيبورد، لا كلمات مرور، لا لقطات شاشة. كل شي محفوظ محلياً بملف SQLite تتحكم فيه بالكامل. يسعدني أي رأي أو ملاحظة! 🕒
+>  TimeScope، برنامج مجاني ومفتوح المصدر لتتبع الوقت على ويندوز، يشتغل مثل RescueTime لكن يأخذ الخصوصية على محمل الجد. يتتبع تلقائياً التطبيقات التي تستخدمها (والمواقع اختيارياً)، ويعرض لك لوحة تحكم أنيقة فيها تصنيفات وأهداف ووضع تركيز — وكل هذا بدون إرسال أي بيانات للإنترنت أبداً. لا كيبورد، لا كلمات مرور، لا لقطات شاشة. كل شي محفوظ محلياً بملف SQLite تتحكم فيه بالكامل. يسعدني أي رأي أو ملاحظة! 🕒
 
 **عنوان لمنصة تقنية:**
 > TimeScope — تتبّع وقتك، لا خصوصيتك. بديل محلي ومفتوح المصدر لبرنامج RescueTime مخصص لويندوز.
@@ -508,7 +508,7 @@ Ready-to-use copy for launching TimeScope on Product Hunt, Reddit, X/Twitter, Li
 > 🕒 TimeScope — Windows için ücretsiz, açık kaynaklı, gizlilik odaklı bir RescueTime alternatifi. Bulut yok, hesap yok, telemetri yok. Tüm izleme verileri kendi bilgisayarında kalır. %100 yerel, %100 senin. ⭐ github.com/EnesAhmet10000/timescope
 
 **Orta (Reddit / LinkedIn):**
-> TimeScope'u geliştirdim — RescueTime gibi çalışan ama gizliliği ciddiye alan, ücretsiz ve açık kaynaklı bir Windows zaman takip uygulaması. Kullandığın uygulamaları (ve isteğe bağlı olarak web sitesi alan adlarını) otomatik olarak izler, kategoriler, hedefler ve odak modu içeren temiz bir yerel panel sunar — ve asla internete tek bir veri göndermez. Tuş vuruşu yok, şifre yok, ekran görüntüsü yok. Her şey tamamen senin kontrolünde olan yerel bir SQLite dosyasında saklanır. Geri bildirimlerinizi bekliyorum! 🕒
+> TimeScope — RescueTime gibi çalışan ama gizliliği ciddiye alan, ücretsiz ve açık kaynaklı bir Windows zaman takip uygulaması. Kullandığın uygulamaları (ve isteğe bağlı olarak web sitesi alan adlarını) otomatik olarak izler, kategoriler, hedefler ve odak modu içeren temiz bir yerel panel sunar — ve asla internete tek bir veri göndermez. Tuş vuruşu yok, şifre yok, ekran görüntüsü yok. Her şey tamamen senin kontrolünde olan yerel bir SQLite dosyasında saklanır. Geri bildirimlerinizi bekliyorum! 🕒
 
 **Tanıtım sloganı:**
 > TimeScope — Zamanını takip et, gizliliğini değil. Windows için yerel, açık kaynaklı bir RescueTime alternatifi.
