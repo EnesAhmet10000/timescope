@@ -1,0 +1,12 @@
+node_modules/
+dist/
+release/
+assets/
+*.log
+.DS_Store
+
+# Local data — never commit user activity data
+*.db
+*.sqlite
+*.sqlite3
+Thumbs.db

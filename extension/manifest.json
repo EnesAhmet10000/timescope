@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "TimeScope Companion",
+  "version": "0.1.0",
+  "description": "Sends only the active tab's domain and timestamps to your local TimeScope app. No page content, ever.",
+  "permissions": ["tabs", "idle", "storage", "alarms"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html"
+}

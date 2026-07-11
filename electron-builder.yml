@@ -1,0 +1,30 @@
+appId: com.timescope.desktop
+productName: TimeScope
+copyright: TimeScope
+
+directories:
+  output: release
+  buildResources: assets
+
+files:
+  - dist/**
+  - package.json
+
+# Native/wasm modules must live outside the asar archive.
+asarUnpack:
+  - node_modules/koffi/**
+  - node_modules/node-sqlite3-wasm/**
+
+extraResources:
+  - from: assets
+    to: assets
+
+win:
+  target:
+    - nsis
+  icon: assets/icon.png
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  runAfterFinish: true
