@@ -163,6 +163,18 @@ export interface TrackingStatus {
   sinceTs: number | null;
 }
 
+export interface Insights {
+  topApp: { name: string; ms: number } | null;
+  topCategory: { name: string; kind: CategoryKind | null; color: string | null; ms: number } | null;
+  longestSession: { name: string; ms: number; startTs: number } | null;
+  mostActiveDay: { dayStartTs: number; ms: number } | null;
+  dailyAverageMs: number;
+  activeDays: number;
+  distinctApps: number;
+  productivePct: number;
+  focusScore: number;
+}
+
 export interface FocusStatus {
   session: FocusSession | null;
   remainingSec: number;
@@ -183,6 +195,7 @@ export interface IpcApi {
   'analytics:daily': { req: Range; res: DayBucket[] };
   'analytics:sessions': { req: Range; res: SessionRow[] };
   'analytics:webSessions': { req: Range; res: WebSessionRow[] };
+  'analytics:insights': { req: Range; res: Insights };
   'apps:list': { req: void; res: AppRow[] };
   'domains:list': { req: void; res: DomainRow[] };
   'categories:list': { req: void; res: Category[] };
@@ -204,6 +217,8 @@ export interface IpcApi {
   'data:delete': { req: { mode: DeleteMode; from?: number; to?: number }; res: { deletedRows: number } };
   'onboarding:complete': { req: { trackWindowTitles: boolean; trackWebsites: boolean }; res: Settings };
   'system:info': { req: void; res: { version: string; dataDir: string } };
+  'system:openDataDir': { req: void; res: { opened: boolean } };
+  'system:restart': { req: void; res: void };
 }
 
 export type IpcChannel = keyof IpcApi;

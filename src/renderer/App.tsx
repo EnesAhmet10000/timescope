@@ -58,6 +58,11 @@ export default function App() {
 
   const status = usePolled(() => invoke('tracking:status'), [settingsBump], 5000);
 
+  const toggleTracking = (): void => {
+    const paused = status?.paused ?? false;
+    void invoke('tracking:setPaused', { paused: !paused }).then(() => setSettingsBump((b) => b + 1));
+  };
+
   // Refresh non-custom ranges when the day/time advances.
   const onRange = (v: View, r: Range): void => {
     setView(v);
@@ -99,10 +104,18 @@ export default function App() {
           </button>
         ))}
         <div className="sidebar-footer">
-          <span className={`tracking-pill ${status?.paused ? 'paused' : ''}`}>
+          <button
+            type="button"
+            className={`tracking-toggle ${status?.paused ? 'paused' : status?.state === 'idle' ? 'idle' : 'on'}`}
+            onClick={toggleTracking}
+            title={status?.paused ? 'Tracking is paused — click to resume' : 'Tracking is on — click to pause'}
+          >
             <span className="dot" />
-            {status?.paused ? 'Paused' : status?.state === 'idle' ? 'Idle' : 'Tracking'}
-          </span>
+            <span className="tt-text">
+              {status?.paused ? 'Tracking off' : status?.state === 'idle' ? 'On · idle' : 'Tracking on'}
+            </span>
+            <span className="tt-action">{status?.paused ? 'Resume' : 'Pause'}</span>
+          </button>
         </div>
       </nav>
       <main className="main">

@@ -2,7 +2,7 @@
  * IPC command surface. Every handler validates its payload before touching
  * the database — the renderer is treated as untrusted input.
  */
-import { app, dialog, ipcMain, type BrowserWindow } from 'electron';
+import { app, dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import type { Db } from './db';
 import type { Catalog } from './catalog';
 import type { SettingsStore } from './settings';
@@ -98,6 +98,7 @@ export interface IpcContext {
   extServer: ExtensionServer;
   getWindow: () => BrowserWindow | null;
   applySettingsSideEffects: (before: Settings, after: Settings) => void;
+  restart: () => void;
 }
 
 export function registerIpc(ctx: IpcContext): void {
@@ -142,6 +143,7 @@ export function registerIpc(ctx: IpcContext): void {
   handle('analytics:daily', (p) => analytics.daily(db, range(p)));
   handle('analytics:sessions', (p) => analytics.getSessions(db, range(p)));
   handle('analytics:webSessions', (p) => analytics.getWebSessions(db, range(p)));
+  handle('analytics:insights', (p) => analytics.insights(db, range(p)));
 
   // ---- catalog ----
   handle('apps:list', () =>
@@ -319,9 +321,16 @@ export function registerIpc(ctx: IpcContext): void {
     return after;
   });
 
-  // ---- app info ----
+  // ---- app info / control ----
   ipcMain.handle('system:info', () => ({
     version: app.getVersion(),
     dataDir: app.getPath('userData'),
   }));
+  handle('system:openDataDir', async () => {
+    const err = await shell.openPath(app.getPath('userData'));
+    return { opened: err === '' };
+  });
+  handle('system:restart', () => {
+    ctx.restart();
+  });
 }

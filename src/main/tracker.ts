@@ -65,6 +65,19 @@ export class Tracker {
     this.safePoll();
   }
 
+  /**
+   * Restart the poll loop if it is not running. Called on system resume/unlock
+   * as a safety net so a missed timer can never leave tracking permanently off.
+   */
+  ensureRunning(): void {
+    if (!this.timer) this.start();
+  }
+
+  /** True while the poll loop is active — used by the health watchdog. */
+  isRunning(): boolean {
+    return this.timer !== null;
+  }
+
   stop(): void {
     if (this.timer) {
       clearInterval(this.timer);
@@ -93,8 +106,19 @@ export class Tracker {
       return;
     }
 
-    // Forced idle (lock screen / suspend) is managed by events, not polling.
-    if (this.idle && this.idle.kind !== 'idle') return;
+    // Forced idle (lock screen / suspend) is normally cleared by the OS
+    // resume/unlock event. Those events are occasionally missed — notably with
+    // Windows "modern standby" sleep — which previously wedged tracking off
+    // forever. Self-heal: if real input has returned, close the forced idle and
+    // resume normal tracking instead of returning early on every poll.
+    if (this.idle && this.idle.kind !== 'idle') {
+      if (this.deps.getIdleSec() * 1000 < s.idleThresholdSec * 1000) {
+        this.resumeFromForcedIdle();
+      } else {
+        this.db.run('UPDATE idle_periods SET end_ts = ? WHERE id = ?', [now, this.idle.rowId]);
+        return;
+      }
+    }
 
     const idleSec = this.deps.getIdleSec();
     const idleMs = idleSec * 1000;

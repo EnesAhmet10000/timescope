@@ -104,6 +104,15 @@ export function SettingsPage(props: { onSettingsChanged: () => void }) {
     setNotice(res.savedTo ? `Exported to ${res.savedTo}` : '');
   };
 
+  const openDataFolder = async (): Promise<void> => {
+    const res = await invoke('system:openDataDir');
+    if (!res.opened) setNotice('Could not open the data folder.');
+  };
+
+  const restartApp = (): void => {
+    void invoke('system:restart');
+  };
+
   const doDelete = async (mode: DeleteMode): Promise<void> => {
     const res = await invoke('data:delete', mode === 'range' ? { mode, from: 0, to: Date.now() } : { mode });
     setNotice(`Deleted ${res.deletedRows} records.`);
@@ -119,6 +128,14 @@ export function SettingsPage(props: { onSettingsChanged: () => void }) {
             Data folder: <code className="inline">{info?.dataDir ?? '…'}</code>
           </div>
         </div>
+        <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn" onClick={() => void openDataFolder()}>
+            Open data folder
+          </button>
+          <button className="btn" onClick={restartApp}>
+            Restart app
+          </button>
+        </span>
       </div>
 
       {notice ? (

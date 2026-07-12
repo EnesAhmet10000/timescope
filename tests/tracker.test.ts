@@ -174,6 +174,30 @@ describe('Tracker', () => {
     expect(sessions(ctx)).toHaveLength(2); // one before lock, one after
   });
 
+  it('self-heals when a resume event is missed after suspend', () => {
+    const ctx = makeCtx();
+    ctx.settings.update({ idleThresholdSec: 300 });
+    const { tracker, state, advance } = makeTracker(ctx);
+    tracker.poll();
+    advance(10_000);
+    tracker.poll();
+    // System suspends. Normally 'resume' would call resumeFromForcedIdle(),
+    // but simulate that event being dropped — it is never called.
+    tracker.forceIdle('suspend');
+    advance(60_000);
+    // User is back at the keyboard (idle time is low) but no resume event fired.
+    state.idleSec = 0;
+    tracker.poll(); // should close the forced idle itself instead of wedging
+    advance(10_000);
+    tracker.poll();
+    const i = idles(ctx);
+    expect(i).toHaveLength(1);
+    expect(i[0]!.kind).toBe('suspend');
+    expect(i[0]!.end_ts).toBeGreaterThan(i[0]!.start_ts);
+    // Tracking resumed: a new session is being recorded after the missed resume.
+    expect(sessions(ctx).length).toBeGreaterThanOrEqual(2);
+  });
+
   it('MERGE_GAP_MS bounds the merge window', () => {
     const ctx = makeCtx();
     const { tracker, state, advance } = makeTracker(ctx);

@@ -19,6 +19,7 @@ import type {
   IdleRow,
   CategoryKind,
   IdleKind,
+  Insights,
 } from '../shared/types';
 
 export interface Interval {
@@ -255,6 +256,58 @@ export function daily(db: Db, range: Range): DayBucket[] {
     });
   }
   return buckets;
+}
+
+/**
+ * Higher-level "at a glance" insights for a range: top app, top category,
+ * longest single session, most active day, daily average and productivity mix.
+ * Built on the same clipping helpers so numbers agree with the other views.
+ */
+export function insights(db: Db, range: Range): Insights {
+  const apps = byApp(db, range);
+  const cats = byCategory(db, range);
+  const sessions = getSessions(db, range);
+  const s = summary(db, range);
+
+  // Longest single continuous session (clipped to range).
+  let longest: Insights['longestSession'] = null;
+  for (const row of sessions) {
+    const ms = clippedMs(row, range);
+    if (!longest || ms > longest.ms) {
+      longest = { name: row.displayName, ms, startTs: Math.max(row.startTs, range.from) };
+    }
+  }
+
+  // Most active day + how many distinct days had any activity.
+  const dayTotals = new Map<number, number>();
+  for (const row of sessions) {
+    const parts = bucketize([row], range, DAY_MS, startOfLocalDay(range.from));
+    for (const [day, ms] of parts) dayTotals.set(day, (dayTotals.get(day) ?? 0) + ms);
+  }
+  let mostActiveDay: Insights['mostActiveDay'] = null;
+  for (const [dayStartTs, ms] of dayTotals) {
+    if (!mostActiveDay || ms > mostActiveDay.ms) mostActiveDay = { dayStartTs, ms };
+  }
+  const activeDays = [...dayTotals.values()].filter((ms) => ms > 0).length;
+  const spanDays = Math.max(1, Math.ceil((range.to - startOfLocalDay(range.from)) / DAY_MS));
+
+  const topApp = apps[0] ? { name: apps[0].displayName, ms: apps[0].ms } : null;
+  const topCat = cats[0]
+    ? { name: cats[0].name, kind: cats[0].kind, color: cats[0].color, ms: cats[0].ms }
+    : null;
+
+  const categorized = s.productiveMs + s.distractingMs;
+  return {
+    topApp,
+    topCategory: topCat,
+    longestSession: longest,
+    mostActiveDay,
+    dailyAverageMs: Math.round(s.activeMs / spanDays),
+    activeDays,
+    distinctApps: apps.length,
+    productivePct: s.activeMs > 0 ? Math.round((s.productiveMs / s.activeMs) * 100) : 0,
+    focusScore: categorized > 0 ? Math.round((s.productiveMs / categorized) * 100) : 0,
+  };
 }
 
 /** Minutes spent today in a category (apps + websites are NOT double-counted: apps only). */

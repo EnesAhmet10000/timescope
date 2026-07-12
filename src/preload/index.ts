@@ -15,6 +15,7 @@ const ALLOWED_CHANNELS = new Set([
   'analytics:daily',
   'analytics:sessions',
   'analytics:webSessions',
+  'analytics:insights',
   'apps:list',
   'domains:list',
   'categories:list',
@@ -36,6 +37,8 @@ const ALLOWED_CHANNELS = new Set([
   'data:delete',
   'onboarding:complete',
   'system:info',
+  'system:openDataDir',
+  'system:restart',
 ]);
 
 contextBridge.exposeInMainWorld('timescope', {

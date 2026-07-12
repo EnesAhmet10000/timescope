@@ -183,6 +183,17 @@ export function installDevMock(): void {
     },
     'analytics:sessions': (p) => sessionsFor((p as { from: number }).from, (p as { to: number }).to),
     'analytics:webSessions': () => [],
+    'analytics:insights': () => ({
+      topApp: { name: 'Visual Studio Code', ms: 3.4 * H },
+      topCategory: { name: 'Development', kind: 'productive', color: '#6366f1', ms: 3.9 * H },
+      longestSession: { name: 'Visual Studio Code', ms: 52 * 60000, startTs: t0 + 9 * H },
+      mostActiveDay: { dayStartTs: t0, ms: 8 * H },
+      dailyAverageMs: 6.5 * H,
+      activeDays: 5,
+      distinctApps: apps.length,
+      productivePct: 55,
+      focusScore: 80,
+    }),
     'apps:list': () =>
       apps.map((a) => ({ id: a.appId, exeName: a.exeName, displayName: a.displayName, exePath: null, categoryId: a.categoryId })),
     'domains:list': () => domains.map((d) => ({ id: d.domainId, domain: d.domain, categoryId: d.categoryId })),
@@ -245,6 +256,8 @@ export function installDevMock(): void {
       return settings;
     },
     'system:info': () => ({ version: '0.1.0-mock', dataDir: 'C:\\Users\\you\\AppData\\Roaming\\TimeScope' }),
+    'system:openDataDir': () => ({ opened: true }),
+    'system:restart': () => undefined,
   };
 
   window.timescope = {

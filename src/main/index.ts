@@ -14,6 +14,7 @@ import { TrayController } from './tray';
 import { registerIpc } from './ipc';
 import { applyRetention } from './exporter';
 import { getForegroundInfo } from './win32';
+import { initLogger, logError, logInfo } from './logger';
 import * as analytics from './analytics';
 import type { Settings } from '../shared/types';
 
@@ -42,10 +43,17 @@ let tray: TrayController;
 async function main(): Promise<void> {
   await app.whenReady();
 
+  if (!isSmoke) initLogger(app.getPath('userData'));
+
   const dbPath = isSmoke
     ? path.join(app.getPath('temp'), `timescope-smoke-${Date.now()}.db`)
     : path.join(app.getPath('userData'), 'timescope.db');
-  db = openDb(dbPath);
+  try {
+    db = openDb(dbPath);
+  } catch (err) {
+    logError('failed to open database', err);
+    throw err;
+  }
   settings = new SettingsStore(db);
   catalog = new Catalog(db);
   focus = new FocusManager(db);
@@ -89,6 +97,10 @@ async function main(): Promise<void> {
       applySettingsSideEffects(before, after);
     },
     openDashboard: () => showWindow(),
+    openDataDir: () => {
+      void shell.openPath(app.getPath('userData'));
+    },
+    restart: () => restartApp(),
     quit: () => {
       quitting = true;
       app.quit();
@@ -105,17 +117,36 @@ async function main(): Promise<void> {
     extServer,
     getWindow: () => win,
     applySettingsSideEffects,
+    restart: restartApp,
   });
 
-  // Power / lock-screen integration.
+  // Power / lock-screen integration. On resume/unlock we both end the forced
+  // idle period AND make sure the poll loop is alive — belt-and-braces so a
+  // missed event can never leave tracking permanently off.
   powerMonitor.on('lock-screen', () => tracker.forceIdle('locked'));
-  powerMonitor.on('unlock-screen', () => tracker.resumeFromForcedIdle());
+  powerMonitor.on('unlock-screen', () => {
+    tracker.resumeFromForcedIdle();
+    tracker.ensureRunning();
+  });
   powerMonitor.on('suspend', () => tracker.forceIdle('suspend'));
-  powerMonitor.on('resume', () => tracker.resumeFromForcedIdle());
+  powerMonitor.on('resume', () => {
+    logInfo('system resume — resuming tracking');
+    tracker.resumeFromForcedIdle();
+    tracker.ensureRunning();
+  });
   powerMonitor.on('shutdown', () => tracker.stop());
 
   applyRetention(db, settings.get().retentionDays, Date.now());
   setInterval(() => applyRetention(db, settings.get().retentionDays, Date.now()), 6 * 3_600_000);
+
+  // Health watchdog: if the poll loop is ever found stopped while tracking is
+  // enabled, restart it. Cheap insurance against a wedged tracker.
+  setInterval(() => {
+    if (!settings.get().trackingPaused && !tracker.isRunning()) {
+      logError('watchdog: tracker was not running — restarting it');
+      tracker.ensureRunning();
+    }
+  }, 60_000);
 
   tracker.start();
   createWindow();
@@ -133,11 +164,26 @@ async function main(): Promise<void> {
       extServer.stop();
       db.close();
     } catch (err) {
-      console.error('shutdown error:', err);
+      logError('shutdown error', err);
     }
   });
 
   if (isSmoke) void runSmoke();
+}
+
+/** Cleanly flush + relaunch the app (used by the tray and the dashboard). */
+function restartApp(): void {
+  logInfo('restart requested');
+  try {
+    tracker.stop();
+    extServer.stop();
+    db.close();
+  } catch (err) {
+    logError('error during restart shutdown', err);
+  }
+  quitting = true;
+  app.relaunch();
+  app.exit(0);
 }
 
 function applySettingsSideEffects(before: Settings, after: Settings): void {

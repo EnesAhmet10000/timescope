@@ -9,6 +9,8 @@ export interface TrayCallbacks {
   isPaused: () => boolean;
   setPaused: (paused: boolean) => void;
   openDashboard: () => void;
+  openDataDir: () => void;
+  restart: () => void;
   quit: () => void;
 }
 
@@ -41,12 +43,15 @@ export class TrayController {
     this.tray.setToolTip(paused ? 'TimeScope — tracking paused' : 'TimeScope — tracking active');
     this.tray.setContextMenu(
       Menu.buildFromTemplate([
-        { label: paused ? 'TimeScope (paused)' : 'TimeScope (tracking)', enabled: false },
+        { label: paused ? '● Tracking is PAUSED' : '● Tracking is ON', enabled: false },
         { type: 'separator' },
         { label: 'Open Dashboard', click: () => this.cb.openDashboard() },
         paused
           ? { label: 'Resume Tracking', click: () => this.cb.setPaused(false) }
           : { label: 'Pause Tracking', click: () => this.cb.setPaused(true) },
+        { type: 'separator' },
+        { label: 'Open Data Folder', click: () => this.cb.openDataDir() },
+        { label: 'Restart TimeScope', click: () => this.cb.restart() },
         { type: 'separator' },
         { label: 'Quit TimeScope', click: () => this.cb.quit() },
       ]),
