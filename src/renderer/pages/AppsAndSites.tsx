@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { invoke, fmtDuration, getRange, type View } from '../api';
 import { Card, RangePicker, usePolled } from '../components/common';
+import { useT } from '../i18n';
 import type { Category, Range } from '../../shared/types';
 
 function CategorySelect(props: {
@@ -9,12 +10,13 @@ function CategorySelect(props: {
   value: number | null;
   onChange: (categoryId: number | null) => void;
 }) {
+  const { t } = useT();
   return (
     <select
       value={props.value ?? ''}
       onChange={(e) => props.onChange(e.target.value === '' ? null : Number(e.target.value))}
     >
-      <option value="">Uncategorized</option>
+      <option value="">{t('common.uncategorized')}</option>
       {props.categories.map((c) => (
         <option key={c.id} value={c.id}>
           {c.name}
@@ -25,6 +27,7 @@ function CategorySelect(props: {
 }
 
 export function Applications(props: { view: View; range: Range; onRange: (v: View, r: Range) => void }) {
+  const { t } = useT();
   const [bump, setBump] = useState(0);
   const { range, view } = props;
   const usage = usePolled(() => invoke('analytics:apps', range), [range.from, range.to, bump]);
@@ -40,14 +43,14 @@ export function Applications(props: { view: View; range: Range; onRange: (v: Vie
     <>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Applications</h1>
-          <div className="page-sub">Every application seen in this period. Assign categories to shape your stats.</div>
+          <h1 className="page-title">{t('apps.title')}</h1>
+          <div className="page-sub">{t('apps.sub')}</div>
         </div>
         <RangePicker view={view} range={range} onChange={props.onRange} />
       </div>
       <Card>
         {(usage ?? []).length === 0 ? (
-          <div className="empty">No application activity in this period.</div>
+          <div className="empty">{t('apps.empty')}</div>
         ) : (
           (usage ?? []).map((a) => (
             <div className="row" key={a.appId}>
@@ -71,6 +74,7 @@ export function Applications(props: { view: View; range: Range; onRange: (v: Vie
 }
 
 export function Websites(props: { view: View; range: Range; onRange: (v: View, r: Range) => void }) {
+  const { t } = useT();
   const [bump, setBump] = useState(0);
   const { range, view } = props;
   const usage = usePolled(() => invoke('analytics:domains', range), [range.from, range.to, bump]);
@@ -87,19 +91,19 @@ export function Websites(props: { view: View; range: Range; onRange: (v: View, r
     <>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Websites</h1>
-          <div className="page-sub">Domains only — page contents are never collected.</div>
+          <h1 className="page-title">{t('sites.title')}</h1>
+          <div className="page-sub">{t('sites.sub')}</div>
         </div>
         <RangePicker view={view} range={range} onChange={props.onRange} />
       </div>
       {settings && !settings.trackWebsites ? (
         <div className="error-banner" style={{ color: 'var(--ink-2)', background: 'var(--surface-2)' }}>
-          Website tracking is off. Enable it in Settings, then connect the browser extension (see README).
+          {t('sites.off')}
         </div>
       ) : null}
       <Card>
         {(usage ?? []).length === 0 ? (
-          <div className="empty">No website activity in this period.</div>
+          <div className="empty">{t('sites.empty')}</div>
         ) : (
           (usage ?? []).map((d) => (
             <div className="row" key={d.domainId}>

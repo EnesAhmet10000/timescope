@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { invoke, fromDateInputValue, toDateInputValue } from '../api';
 import { Card, ConfirmModal, Modal, Segmented, Switch, usePolled } from '../components/common';
-import type { DeleteMode, Settings as SettingsT, Theme } from '../../shared/types';
+import { useT, LANGUAGES } from '../i18n';
+import type { DeleteMode, Language, Settings as SettingsT, Theme } from '../../shared/types';
 
 function RangeDeleteModal(props: { onDeleted: (n: number) => void; onClose: () => void }) {
+  const { t } = useT();
   const DAY = 86_400_000;
   const [from, setFrom] = useState(toDateInputValue(Date.now() - 7 * DAY));
   const [to, setTo] = useState(toDateInputValue(Date.now()));
@@ -20,24 +22,24 @@ function RangeDeleteModal(props: { onDeleted: (n: number) => void; onClose: () =
   };
 
   return (
-    <Modal title="Delete a date range" onClose={props.onClose}>
+    <Modal title={t('settings.rangeDelTitle')} onClose={props.onClose}>
       <p style={{ color: 'var(--ink-2)' }}>
-        Permanently removes all app, website and idle records whose start falls in this range.
+        {t('settings.rangeDelMsg')}
       </p>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <span style={{ color: 'var(--muted)' }}>to</span>
+        <span style={{ color: 'var(--muted)' }}>{t('range.to')}</span>
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
       </div>
       <div className="modal-actions">
-        <button className="btn" onClick={props.onClose}>Cancel</button>
-        <button className="btn danger" onClick={() => setConfirming(true)}>Delete range…</button>
+        <button className="btn" onClick={props.onClose}>{t('common.cancel')}</button>
+        <button className="btn danger" onClick={() => setConfirming(true)}>{t('settings.rangeDelBtn')}</button>
       </div>
       {confirming ? (
         <ConfirmModal
-          title="Delete this date range?"
-          message={`All activity from ${from} through ${to} will be permanently deleted. This cannot be undone.`}
-          confirmLabel="Delete permanently"
+          title={t('settings.rangeConfirmTitle')}
+          message={t('settings.rangeConfirmMsg', { from, to })}
+          confirmLabel={t('settings.delConfirm')}
           danger
           onConfirm={() => void doDelete()}
           onClose={() => setConfirming(false)}
@@ -48,6 +50,7 @@ function RangeDeleteModal(props: { onDeleted: (n: number) => void; onClose: () =
 }
 
 function TagListEditor(props: { items: string[]; placeholder: string; onChange: (items: string[]) => void }) {
+  const { t } = useT();
   const [draft, setDraft] = useState('');
   const add = (): void => {
     const v = draft.trim().toLowerCase();
@@ -65,7 +68,7 @@ function TagListEditor(props: { items: string[]; placeholder: string; onChange: 
             </button>
           </span>
         ))}
-        {props.items.length === 0 ? <span className="row-sub">None</span> : null}
+        {props.items.length === 0 ? <span className="row-sub">{t('common.none')}</span> : null}
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
         <input
@@ -76,7 +79,7 @@ function TagListEditor(props: { items: string[]; placeholder: string; onChange: 
           onKeyDown={(e) => e.key === 'Enter' && add()}
         />
         <button className="btn" onClick={add}>
-          Add
+          {t('common.add')}
         </button>
       </div>
     </div>
@@ -84,6 +87,7 @@ function TagListEditor(props: { items: string[]; placeholder: string; onChange: 
 }
 
 export function SettingsPage(props: { onSettingsChanged: () => void }) {
+  const { t } = useT();
   const [bump, setBump] = useState(0);
   const [confirm, setConfirm] = useState<{ mode: DeleteMode; label: string } | null>(null);
   const [rangeDelete, setRangeDelete] = useState(false);
@@ -101,12 +105,12 @@ export function SettingsPage(props: { onSettingsChanged: () => void }) {
 
   const doExport = async (format: 'csv' | 'json'): Promise<void> => {
     const res = await invoke('data:export', { format, from: 0, to: Date.now() });
-    setNotice(res.savedTo ? `Exported to ${res.savedTo}` : '');
+    setNotice(res.savedTo ? t('settings.exportedTo', { path: res.savedTo }) : '');
   };
 
   const openDataFolder = async (): Promise<void> => {
     const res = await invoke('system:openDataDir');
-    if (!res.opened) setNotice('Could not open the data folder.');
+    if (!res.opened) setNotice(t('settings.folderError'));
   };
 
   const restartApp = (): void => {
@@ -115,7 +119,7 @@ export function SettingsPage(props: { onSettingsChanged: () => void }) {
 
   const doDelete = async (mode: DeleteMode): Promise<void> => {
     const res = await invoke('data:delete', mode === 'range' ? { mode, from: 0, to: Date.now() } : { mode });
-    setNotice(`Deleted ${res.deletedRows} records.`);
+    setNotice(t('settings.deletedN', { n: res.deletedRows }));
     props.onSettingsChanged();
   };
 
@@ -123,17 +127,17 @@ export function SettingsPage(props: { onSettingsChanged: () => void }) {
     <>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Settings</h1>
+          <h1 className="page-title">{t('settings.title')}</h1>
           <div className="page-sub">
-            Data folder: <code className="inline">{info?.dataDir ?? '…'}</code>
+            {t('settings.dataFolder')} <code className="inline">{info?.dataDir ?? '…'}</code>
           </div>
         </div>
         <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn" onClick={() => void openDataFolder()}>
-            Open data folder
+            {t('settings.openFolder')}
           </button>
           <button className="btn" onClick={restartApp}>
-            Restart app
+            {t('settings.restart')}
           </button>
         </span>
       </div>
@@ -144,29 +148,28 @@ export function SettingsPage(props: { onSettingsChanged: () => void }) {
         </div>
       ) : null}
 
-      <Card title="Tracking">
+      <Card title={t('settings.tracking')}>
         <div className="setting-row">
           <div>
-            <div className="setting-label">Pause tracking</div>
-            <div className="setting-desc">Nothing is recorded while paused. Also available from the tray icon.</div>
+            <div className="setting-label">{t('settings.pause')}</div>
+            <div className="setting-desc">{t('settings.pauseDesc')}</div>
           </div>
           <Switch checked={settings.trackingPaused} onChange={(v) => void update({ trackingPaused: v })} />
         </div>
         <div className="setting-row">
           <div>
-            <div className="setting-label">Track window titles</div>
+            <div className="setting-label">{t('settings.titles')}</div>
             <div className="setting-desc">
-              Off by default. Titles can contain document names or message subjects; leave off for stricter privacy.
+              {t('settings.titlesDesc')}
             </div>
           </div>
           <Switch checked={settings.trackWindowTitles} onChange={(v) => void update({ trackWindowTitles: v })} />
         </div>
         <div className="setting-row">
           <div>
-            <div className="setting-label">Track websites</div>
+            <div className="setting-label">{t('settings.websites')}</div>
             <div className="setting-desc">
-              Requires the TimeScope browser extension. Only the domain (e.g. github.com) and timestamps are received —
-              never URLs or page content.
+              {t('settings.websitesDesc')}
             </div>
           </div>
           <Switch checked={settings.trackWebsites} onChange={(v) => void update({ trackWebsites: v })} />
@@ -174,144 +177,154 @@ export function SettingsPage(props: { onSettingsChanged: () => void }) {
         {settings.trackWebsites ? (
           <div className="setting-row">
             <div>
-              <div className="setting-label">Extension connection</div>
+              <div className="setting-label">{t('settings.extConn')}</div>
               <div className="setting-desc">
-                In the extension options set port <code className="inline">{settings.extensionPort}</code> and token{' '}
-                <code className="inline">{settings.extensionToken}</code>
+                {t('settings.extConnDesc', { port: settings.extensionPort, token: settings.extensionToken })}
               </div>
             </div>
           </div>
         ) : null}
         <div className="setting-row">
           <div>
-            <div className="setting-label">Idle timeout</div>
-            <div className="setting-desc">After this long without input, time is counted as idle instead of active.</div>
+            <div className="setting-label">{t('settings.idle')}</div>
+            <div className="setting-desc">{t('settings.idleDesc')}</div>
           </div>
           <select
             value={settings.idleThresholdSec}
             onChange={(e) => void update({ idleThresholdSec: Number(e.target.value) })}
           >
-            <option value={60}>1 minute</option>
-            <option value={120}>2 minutes</option>
-            <option value={300}>5 minutes (default)</option>
-            <option value={600}>10 minutes</option>
-            <option value={900}>15 minutes</option>
+            <option value={60}>{t('settings.min1')}</option>
+            <option value={120}>{t('settings.min2')}</option>
+            <option value={300}>{t('settings.min5')}</option>
+            <option value={600}>{t('settings.min10')}</option>
+            <option value={900}>{t('settings.min15')}</option>
           </select>
         </div>
         <div className="setting-row">
           <div>
-            <div className="setting-label">Start with Windows</div>
-            <div className="setting-desc">Launch TimeScope minimized to the tray when you sign in. (Applies to the installed app.)</div>
+            <div className="setting-label">{t('settings.startup')}</div>
+            <div className="setting-desc">{t('settings.startupDesc')}</div>
           </div>
           <Switch checked={settings.startWithWindows} onChange={(v) => void update({ startWithWindows: v })} />
         </div>
       </Card>
 
-      <h4 className="section">Appearance</h4>
+      <h4 className="section">{t('settings.appearance')}</h4>
       <Card>
         <div className="setting-row">
-          <div className="setting-label">Theme</div>
+          <div className="setting-label">{t('settings.theme')}</div>
           <Segmented<Theme>
             options={[
-              { value: 'system', label: 'System' },
-              { value: 'light', label: 'Light' },
-              { value: 'dark', label: 'Dark' },
+              { value: 'system', label: t('settings.themeSystem') },
+              { value: 'light', label: t('settings.themeLight') },
+              { value: 'dark', label: t('settings.themeDark') },
             ]}
             value={settings.theme}
             onChange={(v) => void update({ theme: v })}
           />
         </div>
+        <div className="setting-row">
+          <div>
+            <div className="setting-label">{t('settings.language')}</div>
+            <div className="setting-desc">{t('settings.languageDesc')}</div>
+          </div>
+          <Segmented<Language>
+            options={LANGUAGES.map((l) => ({ value: l.value, label: l.label }))}
+            value={settings.language}
+            onChange={(v) => void update({ language: v })}
+          />
+        </div>
       </Card>
 
-      <h4 className="section">Exclusions</h4>
+      <h4 className="section">{t('settings.exclusions')}</h4>
       <Card>
         <div className="setting-row">
           <div>
-            <div className="setting-label">Excluded applications</div>
-            <div className="setting-desc">Process names that are never recorded (e.g. keepass, 1password).</div>
+            <div className="setting-label">{t('settings.exclApps')}</div>
+            <div className="setting-desc">{t('settings.exclAppsDesc')}</div>
             <TagListEditor
               items={settings.excludedApps}
-              placeholder="process name, e.g. keepass"
+              placeholder={t('settings.exclAppsPh')}
               onChange={(items) => void update({ excludedApps: items })}
             />
           </div>
         </div>
         <div className="setting-row">
           <div>
-            <div className="setting-label">Excluded websites</div>
-            <div className="setting-desc">Domains that are never recorded, including subdomains (e.g. mybank.com).</div>
+            <div className="setting-label">{t('settings.exclSites')}</div>
+            <div className="setting-desc">{t('settings.exclSitesDesc')}</div>
             <TagListEditor
               items={settings.excludedDomains}
-              placeholder="domain, e.g. mybank.com"
+              placeholder={t('settings.exclSitesPh')}
               onChange={(items) => void update({ excludedDomains: items })}
             />
           </div>
         </div>
       </Card>
 
-      <h4 className="section">Data</h4>
+      <h4 className="section">{t('settings.data')}</h4>
       <Card>
         <div className="setting-row">
           <div>
-            <div className="setting-label">Data retention</div>
-            <div className="setting-desc">Automatically delete activity older than this.</div>
+            <div className="setting-label">{t('settings.retention')}</div>
+            <div className="setting-desc">{t('settings.retentionDesc')}</div>
           </div>
           <select
             value={settings.retentionDays}
             onChange={(e) => void update({ retentionDays: Number(e.target.value) })}
           >
-            <option value={0}>Keep forever</option>
-            <option value={30}>30 days</option>
-            <option value={90}>90 days</option>
-            <option value={180}>180 days</option>
-            <option value={365}>1 year</option>
+            <option value={0}>{t('settings.keepForever')}</option>
+            <option value={30}>{t('settings.days30')}</option>
+            <option value={90}>{t('settings.days90')}</option>
+            <option value={180}>{t('settings.days180')}</option>
+            <option value={365}>{t('settings.year1')}</option>
           </select>
         </div>
         <div className="setting-row">
           <div>
-            <div className="setting-label">Export data</div>
-            <div className="setting-desc">Save all local activity to a file of your choosing.</div>
+            <div className="setting-label">{t('settings.export')}</div>
+            <div className="setting-desc">{t('settings.exportDesc')}</div>
           </div>
           <span style={{ display: 'flex', gap: 8 }}>
             <button className="btn" onClick={() => void doExport('csv')}>
-              Export CSV
+              {t('settings.exportCsv')}
             </button>
             <button className="btn" onClick={() => void doExport('json')}>
-              Export JSON
+              {t('settings.exportJson')}
             </button>
           </span>
         </div>
         <div className="setting-row">
           <div>
-            <div className="setting-label">Delete data</div>
-            <div className="setting-desc">Permanently remove recorded activity from this computer.</div>
+            <div className="setting-label">{t('settings.deleteData')}</div>
+            <div className="setting-desc">{t('settings.deleteDataDesc')}</div>
           </div>
           <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <button className="btn danger" onClick={() => setRangeDelete(true)}>
-              Date range…
+              {t('settings.dateRange')}
             </button>
-            <button className="btn danger" onClick={() => setConfirm({ mode: 'web', label: 'all browsing data' })}>
-              Browsing data
+            <button className="btn danger" onClick={() => setConfirm({ mode: 'web', label: t('settings.labelWeb') })}>
+              {t('settings.browsingData')}
             </button>
-            <button className="btn danger" onClick={() => setConfirm({ mode: 'apps', label: 'all application data' })}>
-              App data
+            <button className="btn danger" onClick={() => setConfirm({ mode: 'apps', label: t('settings.labelApps') })}>
+              {t('settings.appData')}
             </button>
-            <button className="btn danger" onClick={() => setConfirm({ mode: 'all', label: 'ALL local data' })}>
-              Everything
+            <button className="btn danger" onClick={() => setConfirm({ mode: 'all', label: t('settings.labelAll') })}>
+              {t('settings.everything')}
             </button>
           </span>
         </div>
       </Card>
 
       <div className="row-sub" style={{ marginTop: 18 }}>
-        TimeScope v{info?.version ?? '…'} · local-only build — no cloud sync, no telemetry.
+        {t('settings.footer', { v: info?.version ?? '…' })}
       </div>
 
       {confirm ? (
         <ConfirmModal
-          title="Delete data?"
-          message={`This permanently deletes ${confirm.label} from this computer. This cannot be undone.`}
-          confirmLabel="Delete permanently"
+          title={t('settings.delTitle')}
+          message={t('settings.delMsg', { label: confirm.label })}
+          confirmLabel={t('settings.delConfirm')}
           danger
           onConfirm={() => void doDelete(confirm.mode)}
           onClose={() => setConfirm(null)}

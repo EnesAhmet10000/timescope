@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import type { Db } from './db';
-import type { Settings, Theme } from '../shared/types';
+import type { Language, Settings, Theme } from '../shared/types';
 
 export const DEFAULT_SETTINGS: Settings = {
   onboardingDone: false,
@@ -13,11 +13,13 @@ export const DEFAULT_SETTINGS: Settings = {
   excludedApps: [],
   excludedDomains: [],
   theme: 'system',
+  language: 'en', // English is the primary language
   extensionPort: 48733,
   extensionToken: '',
 };
 
 const THEMES: Theme[] = ['system', 'light', 'dark'];
+const LANGUAGES: Language[] = ['en', 'ar', 'tr'];
 
 export class SettingsStore {
   private cache: Settings;
@@ -75,6 +77,7 @@ export function sanitize(s: Record<string, unknown>): Settings {
     excludedApps: strArray(s.excludedApps),
     excludedDomains: strArray(s.excludedDomains),
     theme: THEMES.includes(s.theme as Theme) ? (s.theme as Theme) : d.theme,
+    language: LANGUAGES.includes(s.language as Language) ? (s.language as Language) : d.language,
     extensionPort: int(s.extensionPort, d.extensionPort, 1024, 65535),
     extensionToken: typeof s.extensionToken === 'string' ? s.extensionToken : '',
   };

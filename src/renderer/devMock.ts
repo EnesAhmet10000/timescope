@@ -49,6 +49,7 @@ export function installDevMock(): void {
     excludedApps: ['keepass'],
     excludedDomains: ['mybank.com'],
     theme: 'system',
+    language: 'en',
     extensionPort: 48733,
     extensionToken: 'mock-token-abcdef',
   };

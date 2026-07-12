@@ -1,9 +1,11 @@
 import { invoke, fmtClock, fmtDate, fmtDuration, type View } from '../api';
 import { Card, RangePicker, usePolled } from '../components/common';
 import { HourlyChart } from '../components/charts';
+import { useT } from '../i18n';
 import type { Range } from '../../shared/types';
 
 export function Timeline(props: { view: View; range: Range; onRange: (v: View, r: Range) => void }) {
+  const { t } = useT();
   const { range, view } = props;
   const key = [range.from, range.to];
   const sessions = usePolled(() => invoke('analytics:sessions', range), key);
@@ -16,23 +18,23 @@ export function Timeline(props: { view: View; range: Range; onRange: (v: View, r
     <>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Timeline</h1>
-          <div className="page-sub">Chronological record of focused applications.</div>
+          <h1 className="page-title">{t('timeline.title')}</h1>
+          <div className="page-sub">{t('timeline.sub')}</div>
         </div>
         <RangePicker view={view} range={range} onChange={props.onRange} />
       </div>
 
       {!multiDay ? (
         <div className="grid" style={{ marginBottom: 16 }}>
-          <Card title="Hour-by-hour">
+          <Card title={t('timeline.hourly')}>
             <HourlyChart data={idle ?? []} />
           </Card>
         </div>
       ) : null}
 
-      <Card title={`Sessions (${rows.length}${rows.length === 300 ? ', newest 300' : ''})`}>
+      <Card title={rows.length === 300 ? t('timeline.sessionsCapped', { n: rows.length }) : t('timeline.sessions', { n: rows.length })}>
         {rows.length === 0 ? (
-          <div className="empty">Nothing recorded in this period.</div>
+          <div className="empty">{t('timeline.empty')}</div>
         ) : (
           rows.map((s) => (
             <div className="row" key={s.id}>

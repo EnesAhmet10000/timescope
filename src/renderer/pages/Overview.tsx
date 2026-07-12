@@ -1,6 +1,7 @@
 import { invoke, fmtDuration, fmtDate, type View } from '../api';
 import { Card, RangePicker, StatCard, usePolled } from '../components/common';
 import { CategoryDonut, DailyTrendChart, HourlyChart, UsageList } from '../components/charts';
+import { useT, type TFunc } from '../i18n';
 import type { Insights, Range } from '../../shared/types';
 
 function InsightTile(props: { label: string; value: string; sub?: string }) {
@@ -13,47 +14,49 @@ function InsightTile(props: { label: string; value: string; sub?: string }) {
   );
 }
 
-function InsightsSection(props: { data: Insights | null; multiDay: boolean }) {
-  const i = props.data;
+function InsightsSection(props: { data: Insights | null; multiDay: boolean; t: TFunc }) {
+  const { data: i, t } = props;
+  const days = i?.activeDays ?? 0;
   return (
     <div className="insight-grid">
       <InsightTile
-        label="Most used app"
+        label={t('insight.mostUsedApp')}
         value={i?.topApp ? i.topApp.name : '—'}
-        sub={i?.topApp ? fmtDuration(i.topApp.ms) : 'No activity yet'}
+        sub={i?.topApp ? fmtDuration(i.topApp.ms) : t('insight.noActivity')}
       />
       <InsightTile
-        label="Top category"
+        label={t('insight.topCategory')}
         value={i?.topCategory ? i.topCategory.name : '—'}
-        sub={i?.topCategory ? fmtDuration(i.topCategory.ms) : 'Uncategorized'}
+        sub={i?.topCategory ? fmtDuration(i.topCategory.ms) : t('common.uncategorized')}
       />
       <InsightTile
-        label="Longest focus stretch"
+        label={t('insight.longestStretch')}
         value={i?.longestSession ? fmtDuration(i.longestSession.ms) : '—'}
         sub={i?.longestSession ? i.longestSession.name : undefined}
       />
-      <InsightTile label="Productive share" value={`${i?.productivePct ?? 0}%`} sub="of active time" />
+      <InsightTile label={t('insight.productiveShare')} value={`${i?.productivePct ?? 0}%`} sub={t('insight.ofActive')} />
       {props.multiDay ? (
         <>
           <InsightTile
-            label="Daily average"
+            label={t('insight.dailyAverage')}
             value={fmtDuration(i?.dailyAverageMs ?? 0)}
-            sub={`${i?.activeDays ?? 0} active day${(i?.activeDays ?? 0) === 1 ? '' : 's'}`}
+            sub={t(days === 1 ? 'insight.activeDay' : 'insight.activeDays', { n: days })}
           />
           <InsightTile
-            label="Most active day"
+            label={t('insight.mostActiveDay')}
             value={i?.mostActiveDay ? fmtDate(i.mostActiveDay.dayStartTs) : '—'}
             sub={i?.mostActiveDay ? fmtDuration(i.mostActiveDay.ms) : undefined}
           />
         </>
       ) : (
-        <InsightTile label="Apps used" value={String(i?.distinctApps ?? 0)} sub="different applications" />
+        <InsightTile label={t('insight.appsUsed')} value={String(i?.distinctApps ?? 0)} sub={t('insight.differentApps')} />
       )}
     </div>
   );
 }
 
 export function Overview(props: { view: View; range: Range; onRange: (v: View, r: Range) => void }) {
+  const { t } = useT();
   const { range, view } = props;
   const key = [range.from, range.to];
   const summary = usePolled(() => invoke('analytics:summary', range), key);
@@ -70,45 +73,45 @@ export function Overview(props: { view: View; range: Range; onRange: (v: View, r
     <>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Overview</h1>
-          <div className="page-sub">Where your time went — all data stays on this computer.</div>
+          <h1 className="page-title">{t('overview.title')}</h1>
+          <div className="page-sub">{t('overview.sub')}</div>
         </div>
         <RangePicker view={view} range={range} onChange={props.onRange} />
       </div>
 
       <div className="grid grid-stats" style={{ marginBottom: 16 }}>
-        <StatCard label="Active time" value={fmtDuration(summary?.activeMs ?? 0)} color="var(--series-active)" />
-        <StatCard label="Productive" value={fmtDuration(summary?.productiveMs ?? 0)} color="var(--series-productive)" />
+        <StatCard label={t('overview.activeTime')} value={fmtDuration(summary?.activeMs ?? 0)} color="var(--series-active)" />
+        <StatCard label={t('overview.productive')} value={fmtDuration(summary?.productiveMs ?? 0)} color="var(--series-productive)" />
         <StatCard
-          label="Distracting"
+          label={t('overview.distracting')}
           value={fmtDuration(summary?.distractingMs ?? 0)}
           color="var(--series-distracting)"
         />
-        <StatCard label="Idle / away" value={fmtDuration(summary?.idleMs ?? 0)} color="var(--series-idle)" />
+        <StatCard label={t('overview.idle')} value={fmtDuration(summary?.idleMs ?? 0)} color="var(--series-idle)" />
       </div>
 
       <div className="grid" style={{ marginBottom: 16 }}>
         {multiDay ? (
-          <Card title="Daily activity trend">
+          <Card title={t('overview.dailyTrend')}>
             <DailyTrendChart data={daily ?? []} />
           </Card>
         ) : (
-          <Card title="Hour-by-hour timeline">
+          <Card title={t('overview.hourly')}>
             <HourlyChart data={hourly ?? []} />
           </Card>
         )}
       </div>
 
       <div className="grid" style={{ marginBottom: 16 }}>
-        <Card title="Insights">
-          <InsightsSection data={insightsData} multiDay={multiDay} />
+        <Card title={t('overview.insights')}>
+          <InsightsSection data={insightsData} multiDay={multiDay} t={t} />
         </Card>
       </div>
 
       <div className="grid grid-2" style={{ marginBottom: 16 }}>
-        <Card title="Top applications">
+        <Card title={t('overview.topApps')}>
           <UsageList
-            emptyText="No app activity recorded in this period yet."
+            emptyText={t('overview.noApps')}
             items={(apps ?? []).map((a) => ({
               name: a.displayName,
               sub: a.categoryName ?? undefined,
@@ -117,9 +120,9 @@ export function Overview(props: { view: View; range: Range; onRange: (v: View, r
             }))}
           />
         </Card>
-        <Card title="Top websites">
+        <Card title={t('overview.topSites')}>
           <UsageList
-            emptyText="No website activity. Enable website tracking in Settings and install the browser extension."
+            emptyText={t('overview.noSites')}
             items={(domains ?? []).map((d) => ({
               name: d.domain,
               sub: d.categoryName ?? undefined,
@@ -131,7 +134,7 @@ export function Overview(props: { view: View; range: Range; onRange: (v: View, r
       </div>
 
       <div className="grid">
-        <Card title="Time by category">
+        <Card title={t('overview.byCategory')}>
           <CategoryDonut data={categories ?? []} />
         </Card>
       </div>

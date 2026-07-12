@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { fromDateInputValue, getRange, toDateInputValue, type View } from '../api';
+import { useT } from '../i18n';
 import type { Range } from '../../shared/types';
 
 export function Card(props: { title?: string; children: ReactNode; className?: string }) {
@@ -84,12 +85,13 @@ export function ConfirmModal(props: {
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const { t } = useT();
   return (
     <Modal title={props.title} onClose={props.onClose}>
       <p style={{ color: 'var(--ink-2)' }}>{props.message}</p>
       <div className="modal-actions">
         <button className="btn" onClick={props.onClose}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           className={`btn ${props.danger ? 'danger' : 'primary'}`}
@@ -105,15 +107,18 @@ export function ConfirmModal(props: {
   );
 }
 
-const VIEW_OPTIONS: { value: View; label: string }[] = [
-  { value: 'today', label: 'Today' },
-  { value: 'yesterday', label: 'Yesterday' },
-  { value: '7d', label: '7 days' },
-  { value: '30d', label: '30 days' },
-  { value: 'custom', label: 'Custom' },
-];
+const VIEW_VALUES: View[] = ['today', 'yesterday', '7d', '30d', 'custom'];
+const VIEW_TKEY: Record<View, string> = {
+  today: 'range.today',
+  yesterday: 'range.yesterday',
+  '7d': 'range.7d',
+  '30d': 'range.30d',
+  custom: 'range.custom',
+};
 
 export function RangePicker(props: { view: View; range: Range; onChange: (view: View, range: Range) => void }) {
+  const { t } = useT();
+  const options = VIEW_VALUES.map((v) => ({ value: v, label: t(VIEW_TKEY[v]) }));
   const setView = (v: View): void => {
     if (v === 'custom') {
       props.onChange(v, props.range);
@@ -123,7 +128,7 @@ export function RangePicker(props: { view: View; range: Range; onChange: (view: 
   };
   return (
     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-      <Segmented options={VIEW_OPTIONS} value={props.view} onChange={setView} />
+      <Segmented options={options} value={props.view} onChange={setView} />
       {props.view === 'custom' ? (
         <>
           <input
@@ -133,7 +138,7 @@ export function RangePicker(props: { view: View; range: Range; onChange: (view: 
               e.target.value && props.onChange('custom', { ...props.range, from: fromDateInputValue(e.target.value) })
             }
           />
-          <span style={{ color: 'var(--muted)' }}>to</span>
+          <span style={{ color: 'var(--muted)' }}>{t('range.to')}</span>
           <input
             type="date"
             value={toDateInputValue(props.range.to)}

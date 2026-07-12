@@ -14,6 +14,7 @@ import {
   YAxis,
 } from 'recharts';
 import { fmtDuration } from '../api';
+import { useT } from '../i18n';
 import type { CategoryUsage, DayBucket, HourBucket } from '../../shared/types';
 
 function cssVar(name: string): string {
@@ -63,6 +64,7 @@ const minTick = (ms: number): string => `${Math.round(ms / 60000)}m`;
 
 /** Hour-by-hour stacked composition: productive / distracting / other active. */
 export function HourlyChart(props: { data: HourBucket[] }) {
+  const { t } = useT();
   const cProd = cssVar('--series-productive');
   const cDist = cssVar('--series-distracting');
   const cOther = cssVar('--series-active');
@@ -101,9 +103,9 @@ export function HourlyChart(props: { data: HourBucket[] }) {
                   <TooltipBox
                     title={`${hourLabel(Number(label))} – ${hourLabel(Number(label) + 3_600_000)}`}
                     rows={[
-                      { name: 'Productive', color: cProd, ms: Number(payload.find((p) => p.dataKey === 'productive')?.value ?? 0) },
-                      { name: 'Other active', color: cOther, ms: Number(payload.find((p) => p.dataKey === 'other')?.value ?? 0) },
-                      { name: 'Distracting', color: cDist, ms: Number(payload.find((p) => p.dataKey === 'distracting')?.value ?? 0) },
+                      { name: t('chart.productive'), color: cProd, ms: Number(payload.find((p) => p.dataKey === 'productive')?.value ?? 0) },
+                      { name: t('chart.otherActive'), color: cOther, ms: Number(payload.find((p) => p.dataKey === 'other')?.value ?? 0) },
+                      { name: t('chart.distracting'), color: cDist, ms: Number(payload.find((p) => p.dataKey === 'distracting')?.value ?? 0) },
                     ]}
                   />
                 ) : null
@@ -117,9 +119,9 @@ export function HourlyChart(props: { data: HourBucket[] }) {
       </div>
       <Legend
         keys={[
-          { name: 'Productive', color: cProd },
-          { name: 'Other active', color: cOther },
-          { name: 'Distracting', color: cDist },
+          { name: t('chart.productive'), color: cProd },
+          { name: t('chart.otherActive'), color: cOther },
+          { name: t('chart.distracting'), color: cDist },
         ]}
       />
     </div>
@@ -127,6 +129,7 @@ export function HourlyChart(props: { data: HourBucket[] }) {
 }
 
 export function DailyTrendChart(props: { data: DayBucket[] }) {
+  const { t } = useT();
   const cActive = cssVar('--series-active');
   const cProd = cssVar('--series-productive');
   const rows = props.data.map((b) => ({ ts: b.dayStartTs, active: b.activeMs, productive: b.productiveMs }));
@@ -164,8 +167,8 @@ export function DailyTrendChart(props: { data: DayBucket[] }) {
                   <TooltipBox
                     title={dayLabel(Number(label))}
                     rows={[
-                      { name: 'Active', color: cActive, ms: Number(payload.find((p) => p.dataKey === 'active')?.value ?? 0) },
-                      { name: 'Productive', color: cProd, ms: Number(payload.find((p) => p.dataKey === 'productive')?.value ?? 0) },
+                      { name: t('chart.active'), color: cActive, ms: Number(payload.find((p) => p.dataKey === 'active')?.value ?? 0) },
+                      { name: t('chart.productive'), color: cProd, ms: Number(payload.find((p) => p.dataKey === 'productive')?.value ?? 0) },
                     ]}
                   />
                 ) : null
@@ -178,8 +181,8 @@ export function DailyTrendChart(props: { data: DayBucket[] }) {
       </div>
       <Legend
         keys={[
-          { name: 'Active', color: cActive },
-          { name: 'Productive', color: cProd },
+          { name: t('chart.active'), color: cActive },
+          { name: t('chart.productive'), color: cProd },
         ]}
       />
     </div>
@@ -188,10 +191,11 @@ export function DailyTrendChart(props: { data: DayBucket[] }) {
 
 /** Time by category — donut with the category's own (entity) colors. */
 export function CategoryDonut(props: { data: CategoryUsage[] }) {
+  const { t } = useT();
   const fallback = cssVar('--series-idle');
   const surface = cssVar('--surface');
   const total = props.data.reduce((s, c) => s + c.ms, 0);
-  if (total === 0) return <div className="empty">No categorized activity yet.</div>;
+  if (total === 0) return <div className="empty">{t('chart.noCategorized')}</div>;
   const rows = props.data.slice(0, 8);
   return (
     <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -219,7 +223,7 @@ export function CategoryDonut(props: { data: CategoryUsage[] }) {
                     title={String(payload[0]?.name ?? '')}
                     rows={[
                       {
-                        name: `${Math.round((Number(payload[0]?.value ?? 0) / total) * 100)}% of active time`,
+                        name: t('chart.pctOfActive', { n: Math.round((Number(payload[0]?.value ?? 0) / total) * 100) }),
                         color: (payload[0]?.payload as CategoryUsage)?.color ?? fallback,
                         ms: Number(payload[0]?.value ?? 0),
                       },

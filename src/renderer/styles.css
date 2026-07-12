@@ -85,7 +85,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: 16px 10px;
-  border-right: 1px solid var(--border);
+  border-inline-end: 1px solid var(--border);
   background: var(--surface);
 }
 
@@ -120,7 +120,7 @@ body {
   font: inherit;
   font-weight: 500;
   cursor: pointer;
-  text-align: left;
+  text-align: start;
 }
 
 .nav-item:hover {
@@ -197,7 +197,7 @@ body {
 }
 
 .tracking-toggle .tt-action {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;

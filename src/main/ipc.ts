@@ -25,6 +25,7 @@ const SETTINGS_KEYS: (keyof Settings)[] = [
   'excludedApps',
   'excludedDomains',
   'theme',
+  'language',
   'extensionPort',
   'extensionToken',
 ];

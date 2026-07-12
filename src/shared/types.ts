@@ -3,6 +3,7 @@
 export type CategoryKind = 'productive' | 'neutral' | 'distracting';
 export type IdleKind = 'idle' | 'locked' | 'suspend';
 export type Theme = 'system' | 'light' | 'dark';
+export type Language = 'en' | 'ar' | 'tr';
 export type TargetType = 'app' | 'domain';
 
 export interface Settings {
@@ -16,6 +17,7 @@ export interface Settings {
   excludedApps: string[]; // exe names, lowercase
   excludedDomains: string[]; // domains, lowercase
   theme: Theme;
+  language: Language;
   extensionPort: number;
   extensionToken: string;
 }

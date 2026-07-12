@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { invoke, fmtClock, fmtDate, fmtDuration } from '../api';
 import { Card, usePolled } from '../components/common';
+import { useT } from '../i18n';
 
 const PRESETS = [25, 45, 60];
 
 export function Focus() {
+  const { t } = useT();
   const [bump, setBump] = useState(0);
   const [minutes, setMinutes] = useState(25);
   const [customMin, setCustomMin] = useState('');
@@ -41,13 +43,13 @@ export function Focus() {
     <>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Focus</h1>
-          <div className="page-sub">Timed sessions with warnings when you drift into distracting categories.</div>
+          <h1 className="page-title">{t('focus.title')}</h1>
+          <div className="page-sub">{t('focus.sub')}</div>
         </div>
       </div>
 
       <div className="grid grid-2">
-        <Card title={active ? 'Focus session running' : 'Start a focus session'}>
+        <Card title={active ? t('focus.running') : t('focus.start')}>
           {active ? (
             <div className="focus-ring">
               <div
@@ -58,11 +60,11 @@ export function Focus() {
               </div>
               <div className="row-sub" style={{ marginBottom: 16 }}>
                 {status?.currentlyDistracting
-                  ? '⚠ You are in a distracting category right now'
-                  : `Planned ${active.plannedMinutes} min · ${active.warnings} warning${active.warnings === 1 ? '' : 's'} so far`}
+                  ? t('focus.warnNow')
+                  : t(active.warnings === 1 ? 'focus.planned' : 'focus.plannedPlural', { n: active.plannedMinutes, w: active.warnings })}
               </div>
               <button className="btn danger" onClick={() => void stop()}>
-                End session early
+                {t('focus.endEarly')}
               </button>
             </div>
           ) : (
@@ -77,12 +79,12 @@ export function Focus() {
                       setCustomMin('');
                     }}
                   >
-                    {p} min
+                    {t('focus.min', { n: p })}
                   </button>
                 ))}
                 <input
                   type="number"
-                  placeholder="Custom"
+                  placeholder={t('focus.custom')}
                   min={1}
                   max={480}
                   value={customMin}
@@ -90,7 +92,7 @@ export function Focus() {
                   style={{ width: 90 }}
                 />
               </div>
-              <div className="setting-label" style={{ marginBottom: 8 }}>Warn me about:</div>
+              <div className="setting-label" style={{ marginBottom: 8 }}>{t('focus.warnAbout')}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
                 {(categories ?? []).map((c) => {
                   const on = selectedCats.includes(c.id);
@@ -114,30 +116,30 @@ export function Focus() {
                 })}
               </div>
               <button className="btn primary" onClick={() => void start()}>
-                Start focus session
+                {t('focus.startBtn')}
               </button>
             </>
           )}
         </Card>
 
-        <Card title="Recent sessions">
+        <Card title={t('focus.recent')}>
           {(history ?? []).length === 0 ? (
-            <div className="empty">No focus sessions yet.</div>
+            <div className="empty">{t('focus.noSessions')}</div>
           ) : (
             (history ?? []).slice(0, 12).map((f) => (
               <div className="row" key={f.id}>
                 <div className="row-name">
                   {fmtDate(f.startTs)} {fmtClock(f.startTs)}
                   <span className="row-sub">
-                    {' '}· planned {f.plannedMinutes}m
-                    {f.endTs ? ` · actual ${fmtDuration(f.endTs - f.startTs)}` : ' · running'}
+                    {' · '}{t('focus.plannedShort', { n: f.plannedMinutes })}
+                    {f.endTs ? ` · ${t('focus.actual', { d: fmtDuration(f.endTs - f.startTs) })}` : ` · ${t('focus.runningShort')}`}
                   </span>
                 </div>
                 <span
                   className="row-value"
                   style={{ color: f.distractionSeconds > 60 ? 'var(--series-distracting)' : 'var(--good)' }}
                 >
-                  {f.distractionSeconds > 0 ? `${Math.round(f.distractionSeconds / 60)}m distracted` : 'clean'}
+                  {f.distractionSeconds > 0 ? t('focus.distracted', { n: Math.round(f.distractionSeconds / 60) }) : t('focus.clean')}
                 </span>
               </div>
             ))
