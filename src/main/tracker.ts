@@ -19,7 +19,7 @@ import type { Db } from './db';
 import type { Catalog } from './catalog';
 import type { SettingsStore } from './settings';
 import type { IdleKind, TrackingStatus } from '../shared/types';
-import type { ForegroundInfo } from './win32';
+import type { ForegroundInfo } from './foreground';
 
 export const POLL_MS = 2000;
 export const MERGE_GAP_MS = 5000;

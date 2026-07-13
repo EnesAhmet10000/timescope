@@ -1,21 +1,23 @@
 {
   "name": "timescope",
   "productName": "TimeScope",
+  "description": "Privacy-first automatic time tracking for macOS. All data stays local.",
   "version": "0.4.2",
-  "description": "Privacy-first automatic time tracking for Windows. All data stays local.",
   "main": "dist/main/index.js",
   "author": "TimeScope",
   "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "build": "npm run icons && npm run typecheck && node scripts/build-main.mjs && vite build",
+    "build": "npm run icons && npm run macos-helper && npm run typecheck && node scripts/build-main.mjs && vite build",
     "icons": "node scripts/generate-icons.mjs",
+    "macos-helper": "node scripts/build-macos-helper.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "start": "npm run build && electron .",
     "smoke": "node scripts/smoke.mjs",
-    "dist": "npm run build && electron-builder --win"
+    "dist": "npm run build && electron-builder --mac dmg --arm64",
+    "dist:mac": "npm run dist"
   },
   "dependencies": {
     "koffi": "^2.9.0",

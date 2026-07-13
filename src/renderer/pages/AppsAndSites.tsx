@@ -56,7 +56,7 @@ export function Applications(props: { view: View; range: Range; onRange: (v: Vie
             <div className="row" key={a.appId}>
               <div className="row-name">
                 {a.displayName}
-                <span className="row-sub"> · {a.exeName}.exe</span>
+                <span className="row-sub"> · {a.exeName}</span>
               </div>
               <div className="usage-bar">
                 <div style={{ width: `${(a.ms / top) * 100}%`, background: a.color ?? 'var(--series-active)' }} />

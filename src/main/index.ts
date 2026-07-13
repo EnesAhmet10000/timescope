@@ -13,7 +13,7 @@ import { ExtensionServer } from './webserver';
 import { TrayController } from './tray';
 import { registerIpc } from './ipc';
 import { applyRetention } from './exporter';
-import { getForegroundInfo } from './win32';
+import { getForegroundInfo } from './foreground';
 import { initLogger, logError, logInfo } from './logger';
 import { Updater } from './updater';
 import * as analytics from './analytics';

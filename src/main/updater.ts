@@ -18,6 +18,7 @@ import { logError, logInfo } from './logger';
 import type { UpdateInfo } from '../shared/types';
 
 const REPO = 'EnesAhmet10000/timescope';
+const installerExtension = process.platform === 'darwin' ? '.dmg' : '.exe';
 
 export class Updater {
   private state: UpdateInfo;
@@ -49,7 +50,7 @@ export class Updater {
         assets?: { name: string; browser_download_url: string }[];
       };
       const latest = String(data.tag_name ?? '').replace(/^v/, '');
-      const asset = (data.assets ?? []).find((a) => a.name.toLowerCase().endsWith('.exe'));
+      const asset = (data.assets ?? []).find((a) => a.name.toLowerCase().endsWith(installerExtension));
       const newer = compareVersions(latest, this.state.currentVersion) > 0;
       logInfo(`update check: current=${this.state.currentVersion} latest=${latest} newer=${newer}`);
       this.set({
@@ -76,7 +77,7 @@ export class Updater {
       const res = await fetch(this.state.downloadUrl, { headers: { 'User-Agent': 'TimeScope-Updater' } });
       if (!res.ok || !res.body) throw new Error(`Download failed (${res.status})`);
       const total = Number(res.headers.get('content-length') ?? 0);
-      const dest = path.join(app.getPath('temp'), `TimeScope-Setup-${this.state.latestVersion ?? 'latest'}.exe`);
+      const dest = path.join(app.getPath('temp'), `TimeScope-${this.state.latestVersion ?? 'latest'}${installerExtension}`);
       let received = 0;
       let lastPct = -1;
       const body = Readable.fromWeb(res.body as Parameters<typeof Readable.fromWeb>[0]);
@@ -105,7 +106,9 @@ export class Updater {
     if (!this.state.downloadedPath) return;
     logInfo('launching downloaded installer');
     try {
-      spawn(this.state.downloadedPath, [], { detached: true, stdio: 'ignore' }).unref();
+      const command = process.platform === 'darwin' ? 'open' : this.state.downloadedPath;
+      const args = process.platform === 'darwin' ? [this.state.downloadedPath] : [];
+      spawn(command, args, { detached: true, stdio: 'ignore' }).unref();
     } catch (err) {
       logError('failed to launch installer', err);
       this.set({ status: 'error', error: 'Could not launch the installer.' });

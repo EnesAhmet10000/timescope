@@ -24,6 +24,17 @@ const SEED_CATEGORIES: SeedCategory[] = [
 
 /** exe name (lowercase, no .exe) -> [friendly name, seed category name | null] */
 const KNOWN_APPS: Record<string, [string, string | null]> = {
+  'com.microsoft.vscode': ['Visual Studio Code', 'Development'],
+  'com.google.chrome': ['Google Chrome', 'Browsing'],
+  'org.mozilla.firefox': ['Firefox', 'Browsing'],
+  'com.brave.browser': ['Brave', 'Browsing'],
+  'com.tinyspeck.slackmacgap': ['Slack', 'Communication'],
+  'com.hnc.discord': ['Discord', 'Communication'],
+  'com.apple.mail': ['Mail', 'Communication'],
+  'com.apple.terminal': ['Terminal', 'Development'],
+  'com.apple.finder': ['Finder', null],
+  'com.spotify.client': ['Spotify', 'Entertainment'],
+  'org.videolan.vlc': ['VLC', 'Video'],
   code: ['Visual Studio Code', 'Development'],
   devenv: ['Visual Studio', 'Development'],
   idea64: ['IntelliJ IDEA', 'Development'],
@@ -208,6 +219,7 @@ export class Catalog {
 
 export function prettifyExeName(exeName: string): string {
   return exeName
+    .replace(/^(?:com|org|net|io)\./, '')
     .replace(/[-_.]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()

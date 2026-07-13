@@ -1,6 +1,7 @@
-appId: com.timescope.desktop
+appId: com.enesahmet10000.timescope
 productName: TimeScope
 copyright: TimeScope
+artifactName: TimeScope-${version}-${arch}.${ext}
 
 directories:
   output: release
@@ -19,12 +20,13 @@ extraResources:
   - from: assets
     to: assets
 
-win:
+mac:
   target:
-    - nsis
-  icon: assets/icon.png
-
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
-  runAfterFinish: true
+    - target: dmg
+      arch:
+        - arm64
+  category: public.app-category.productivity
+  icon: assets/icon.icns
+  # Apple Development certificates are not valid for distributing a DMG.
+  # Keep local builds reproducible until a Developer ID certificate is added.
+  identity: null

@@ -1,6 +1,8 @@
 # TimeScope 🕒
 
-**A free, open-source, privacy-first RescueTime alternative for Windows 10/11 — all your time-tracking data stays 100% local, with no cloud, no account, and no telemetry.**
+**A free, open-source, privacy-first RescueTime alternative for macOS — all your time-tracking data stays 100% local, with no cloud, no account, and no telemetry.**
+
+> **macOS build:** TimeScope runs on Apple silicon Macs (arm64). It tracks the frontmost app locally; window titles remain optional and may require macOS Screen Recording permission.
 
 TimeScope automatically tracks which desktop apps (and, optionally, which website domains) you spend time on, then shows you a clean local dashboard — daily summaries, categories, goals, focus sessions, and hourly timelines. Think *RescueTime, Rize, or ActivityWatch — but everything stays on your own machine.*
 
@@ -110,7 +112,7 @@ TimeScope is a **free, open-source, privacy-first alternative to RescueTime** fo
 
 Additional controls: pause tracking (tray or Settings), exclude specific apps/domains, retention auto-cleanup, CSV/JSON export, and granular deletion (date range / browsing only / apps only / all).
 
-**Requirements:** Windows 10 or 11, Node.js 20+ (built on Node 24) and npm. No Visual Studio, no Rust, no compilers — the two native-adjacent dependencies are [koffi](https://koffi.dev) (prebuilt FFI) and node-sqlite3-wasm (WASM SQLite), so `npm install` is all you need.
+**Requirements:** macOS on Apple silicon, Node.js 20+ and npm. Xcode Command Line Tools are required only when building from source, to compile the small foreground-app helper.
 
 **Run it locally:**
 ```bash
@@ -126,9 +128,9 @@ npm run build      # typecheck + bundle main/preload + build renderer + generate
 npx electron .      # run the built app
 ```
 
-Build a Windows installer:
+Build a macOS disk image:
 ```bash
-npm run dist        # NSIS installer in release/
+npm run dist        # arm64 DMG in release/
 ```
 
 **All commands**
@@ -140,7 +142,7 @@ npm run dist        # NSIS installer in release/
 | `npm run typecheck` | TypeScript strict-mode check |
 | `npm test` | Vitest unit + integration tests (analytics, tracker state machine, DB) |
 | `npm run smoke` | Automated end-to-end check: launches the built app hidden against a throwaway DB, tracks for 8 s, asserts sessions were recorded |
-| `npm run dist` | Windows installer via electron-builder |
+| `npm run dist` | arm64 macOS DMG via electron-builder |
 | `npm run icons` | Regenerate tray/app icons (pure-code PNG generation) |
 
 UI-only preview in a normal browser (fabricated data, dev-only): `npx vite --config vite.config.ts` then open `http://localhost:5183/?mock=1`.
@@ -235,7 +237,7 @@ Like ActivityWatch, TimeScope keeps 100% of your data local. Unlike closed-sourc
 No, never. TimeScope only records which application was in the foreground and for how long — never keystrokes, passwords, clipboard contents, or screenshots.
 
 **Does it work on Mac or Linux?**
-The current release targets Windows 10/11 only. The core tracking and analytics logic is kept Electron-free specifically to make a future cross-platform (Tauri) port straightforward.
+This build targets Apple silicon macOS. Linux is not currently supported.
 
 ---
 

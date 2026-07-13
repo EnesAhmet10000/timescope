@@ -4,12 +4,11 @@
  * No keystrokes, no clipboard, no screenshots, no page content.
  */
 import path from 'node:path';
+import type { ForegroundInfo } from './foreground';
 
-export interface ForegroundInfo {
-  exeName: string; // lowercase basename without .exe
-  exePath: string | null;
-  title: string;
-}
+// Kept as a type re-export so existing tracker integrations importing this
+// Windows module continue to compile after foreground lookup became portable.
+export type { ForegroundInfo } from './foreground';
 
 interface Win32Api {
   GetForegroundWindow: () => unknown;

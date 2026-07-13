@@ -100,8 +100,36 @@ const gray = [148, 155, 164]; // paused
 for (const [name, color, size] of [
   ['tray-active.png', teal, 32],
   ['tray-paused.png', gray, 32],
-  ['icon.png', teal, 256],
+  ['icon.png', teal, 1024],
 ]) {
   fs.writeFileSync(path.join(outDir, name), encodePng(size, size, drawIcon(size, color)));
   console.log('wrote assets/' + name);
+}
+
+// electron-builder expects an ICNS file for a polished macOS app and DMG.
+// An ICNS is a compact container of PNGs; assembling it directly avoids the
+// platform-specific iconutil tool (which rejects valid iconsets on some Xcode
+// beta releases).
+if (process.platform === 'darwin') {
+  fs.rmSync(path.join(outDir, 'TimeScope.iconset'), { recursive: true, force: true });
+  const chunks = [
+    ['icp4', 16],
+    ['icp5', 32],
+    ['icp6', 64],
+    ['ic07', 128],
+    ['ic08', 256],
+    ['ic09', 512],
+    ['ic10', 1024],
+  ].map(([type, size]) => {
+    const png = encodePng(size, size, drawIcon(size, teal));
+    const header = Buffer.alloc(8);
+    header.write(type, 0, 4, 'ascii');
+    header.writeUInt32BE(png.length + 8, 4);
+    return Buffer.concat([header, png]);
+  });
+  const header = Buffer.alloc(8);
+  header.write('icns', 0, 4, 'ascii');
+  header.writeUInt32BE(8 + chunks.reduce((total, chunk) => total + chunk.length, 0), 4);
+  fs.writeFileSync(path.join(outDir, 'icon.icns'), Buffer.concat([header, ...chunks]));
+  console.log('wrote assets/icon.icns');
 }
