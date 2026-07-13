@@ -185,6 +185,27 @@ export interface FocusStatus {
 
 export type DeleteMode = 'range' | 'web' | 'apps' | 'all';
 
+export type UpdateStatus =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'up-to-date'
+  | 'downloading'
+  | 'downloaded'
+  | 'error';
+
+export interface UpdateInfo {
+  status: UpdateStatus;
+  currentVersion: string;
+  latestVersion?: string;
+  notes?: string;
+  downloadUrl?: string;
+  downloadedPath?: string;
+  progress?: number;
+  error?: string;
+  canInstall: boolean;
+}
+
 /** Renderer -> main IPC surface (all via ipcRenderer.invoke). */
 export interface IpcApi {
   'settings:get': { req: void; res: Settings };
@@ -221,6 +242,10 @@ export interface IpcApi {
   'system:info': { req: void; res: { version: string; dataDir: string } };
   'system:openDataDir': { req: void; res: { opened: boolean } };
   'system:restart': { req: void; res: void };
+  'update:state': { req: void; res: UpdateInfo };
+  'update:check': { req: void; res: UpdateInfo };
+  'update:download': { req: void; res: UpdateInfo };
+  'update:install': { req: void; res: void };
 }
 
 export type IpcChannel = keyof IpcApi;

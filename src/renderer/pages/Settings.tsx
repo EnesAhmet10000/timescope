@@ -1,8 +1,88 @@
-import { useState } from 'react';
-import { invoke, fromDateInputValue, toDateInputValue } from '../api';
+import { useEffect, useState } from 'react';
+import { invoke, fromDateInputValue, onUpdateEvent, toDateInputValue } from '../api';
 import { Card, ConfirmModal, Modal, Segmented, Switch, usePolled } from '../components/common';
 import { useT, LANGUAGES } from '../i18n';
-import type { DeleteMode, Language, Settings as SettingsT, Theme } from '../../shared/types';
+import type { DeleteMode, Language, Settings as SettingsT, Theme, UpdateInfo } from '../../shared/types';
+
+function UpdatesCard() {
+  const { t } = useT();
+  const [info, setInfo] = useState<UpdateInfo | null>(null);
+
+  useEffect(() => {
+    void invoke('update:state').then(setInfo);
+    const off = onUpdateEvent((i) => setInfo(i as UpdateInfo));
+    return off;
+  }, []);
+
+  const status = info?.status ?? 'idle';
+  const busy = status === 'checking' || status === 'downloading';
+
+  const check = (): void => void invoke('update:check').then(setInfo);
+  const download = (): void => void invoke('update:download').then(setInfo);
+  const install = (): void => void invoke('update:install');
+
+  const statusLine = (): string => {
+    switch (status) {
+      case 'checking':
+        return t('update.checking');
+      case 'up-to-date':
+        return t('update.upToDate');
+      case 'available':
+        return t('update.available', { v: info?.latestVersion ?? '' });
+      case 'downloading':
+        return t('update.downloading', { p: info?.progress ?? 0 });
+      case 'downloaded':
+        return t('update.downloaded');
+      case 'error':
+        return t('update.error', { e: info?.error ?? '' });
+      default:
+        return t('update.current', { v: info?.currentVersion ?? '…' });
+    }
+  };
+
+  return (
+    <Card>
+      <div className="setting-row">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="setting-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" />
+            </svg>
+            {t('update.title')}
+            <span className="info-badge" role="img" aria-label={t('update.info')} title={t('update.info')}>
+              !
+            </span>
+          </div>
+          <div className="setting-desc" style={{ color: status === 'error' ? 'var(--critical)' : undefined }}>
+            {statusLine()}
+          </div>
+          {status !== 'idle' ? <div className="row-sub">{t('update.current', { v: info?.currentVersion ?? '…' })}</div> : null}
+          {status === 'downloading' ? (
+            <div className="usage-bar" style={{ maxWidth: 'none', marginTop: 8 }}>
+              <div style={{ width: `${info?.progress ?? 0}%`, background: 'var(--accent)' }} />
+            </div>
+          ) : null}
+          {info && !info.canInstall ? <div className="row-sub" style={{ marginTop: 4 }}>{t('update.devOnly')}</div> : null}
+        </div>
+        <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {status === 'available' && info?.canInstall ? (
+            <button className="btn primary" onClick={download}>
+              {t('update.download')}
+            </button>
+          ) : null}
+          {status === 'downloaded' && info?.canInstall ? (
+            <button className="btn primary" onClick={install}>
+              {t('update.install')}
+            </button>
+          ) : null}
+          <button className="btn" disabled={busy} onClick={check}>
+            {status === 'checking' ? t('update.checking') : t('update.check')}
+          </button>
+        </span>
+      </div>
+    </Card>
+  );
+}
 
 function RangeDeleteModal(props: { onDeleted: (n: number) => void; onClose: () => void }) {
   const { t } = useT();
@@ -315,6 +395,9 @@ export function SettingsPage(props: { onSettingsChanged: () => void }) {
           </span>
         </div>
       </Card>
+
+      <h4 className="section">{t('update.title')}</h4>
+      <UpdatesCard />
 
       <div className="row-sub" style={{ marginTop: 18 }}>
         {t('settings.footer', { v: info?.version ?? '…' })}

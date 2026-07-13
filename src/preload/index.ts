@@ -39,6 +39,10 @@ const ALLOWED_CHANNELS = new Set([
   'system:info',
   'system:openDataDir',
   'system:restart',
+  'update:state',
+  'update:check',
+  'update:download',
+  'update:install',
 ]);
 
 contextBridge.exposeInMainWorld('timescope', {
@@ -52,5 +56,10 @@ contextBridge.exposeInMainWorld('timescope', {
     const listener = (): void => cb();
     ipcRenderer.on('state-changed', listener);
     return () => ipcRenderer.removeListener('state-changed', listener);
+  },
+  onUpdateEvent: (cb: (info: unknown) => void): (() => void) => {
+    const listener = (_e: unknown, info: unknown): void => cb(info);
+    ipcRenderer.on('update-event', listener);
+    return () => ipcRenderer.removeListener('update-event', listener);
   },
 });

@@ -6,6 +6,7 @@ declare global {
     timescope: {
       invoke(channel: string, payload?: unknown): Promise<unknown>;
       onStateChanged(cb: () => void): () => void;
+      onUpdateEvent(cb: (info: unknown) => void): () => void;
     };
   }
 }
@@ -19,6 +20,10 @@ export function invoke<C extends IpcChannel>(
 
 export function onStateChanged(cb: () => void): () => void {
   return window.timescope.onStateChanged(cb);
+}
+
+export function onUpdateEvent(cb: (info: unknown) => void): () => void {
+  return window.timescope.onUpdateEvent(cb);
 }
 
 // ---------- date/range helpers ----------

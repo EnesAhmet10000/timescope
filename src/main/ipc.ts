@@ -9,6 +9,7 @@ import type { SettingsStore } from './settings';
 import type { Tracker } from './tracker';
 import type { FocusManager } from './focus';
 import type { ExtensionServer } from './webserver';
+import type { Updater } from './updater';
 import * as analytics from './analytics';
 import { deleteData, writeExport } from './exporter';
 import type { CategoryKind, Goal, GoalProgress, Range, Settings, TargetType } from '../shared/types';
@@ -100,6 +101,8 @@ export interface IpcContext {
   getWindow: () => BrowserWindow | null;
   applySettingsSideEffects: (before: Settings, after: Settings) => void;
   restart: () => void;
+  updater: Updater;
+  quitForInstall: () => void;
 }
 
 export function registerIpc(ctx: IpcContext): void {
@@ -333,5 +336,13 @@ export function registerIpc(ctx: IpcContext): void {
   });
   handle('system:restart', () => {
     ctx.restart();
+  });
+
+  // ---- updates (manual, user-initiated only) ----
+  handle('update:state', () => ctx.updater.getState());
+  handle('update:check', () => ctx.updater.check());
+  handle('update:download', () => ctx.updater.download());
+  handle('update:install', () => {
+    ctx.updater.install(ctx.quitForInstall);
   });
 }

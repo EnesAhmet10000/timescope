@@ -15,6 +15,7 @@ import { registerIpc } from './ipc';
 import { applyRetention } from './exporter';
 import { getForegroundInfo } from './win32';
 import { initLogger, logError, logInfo } from './logger';
+import { Updater } from './updater';
 import * as analytics from './analytics';
 import type { Settings } from '../shared/types';
 
@@ -39,6 +40,7 @@ let tracker: Tracker;
 let focus: FocusManager;
 let extServer: ExtensionServer;
 let tray: TrayController;
+let updater: Updater;
 
 async function main(): Promise<void> {
   await app.whenReady();
@@ -89,6 +91,8 @@ async function main(): Promise<void> {
   extServer = new ExtensionServer(db, catalog, settings);
   extServer.sync();
 
+  updater = new Updater((s) => win?.webContents.send('update-event', s));
+
   tray = new TrayController({
     isPaused: () => settings.get().trackingPaused,
     setPaused: (paused) => {
@@ -118,6 +122,11 @@ async function main(): Promise<void> {
     getWindow: () => win,
     applySettingsSideEffects,
     restart: restartApp,
+    updater,
+    quitForInstall: () => {
+      quitting = true;
+      app.quit();
+    },
   });
 
   // Power / lock-screen integration. On resume/unlock we both end the forced

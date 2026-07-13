@@ -259,6 +259,10 @@ export function installDevMock(): void {
     'system:info': () => ({ version: '0.1.0-mock', dataDir: 'C:\\Users\\you\\AppData\\Roaming\\TimeScope' }),
     'system:openDataDir': () => ({ opened: true }),
     'system:restart': () => undefined,
+    'update:state': () => ({ status: 'idle', currentVersion: '0.4.0-mock', canInstall: true }),
+    'update:check': () => ({ status: 'available', currentVersion: '0.4.0-mock', latestVersion: '0.5.0', canInstall: true }),
+    'update:download': () => ({ status: 'downloaded', currentVersion: '0.4.0-mock', latestVersion: '0.5.0', progress: 100, canInstall: true }),
+    'update:install': () => undefined,
   };
 
   window.timescope = {
@@ -267,5 +271,6 @@ export function installDevMock(): void {
       return h ? Promise.resolve(h(payload)) : Promise.reject(new Error(`mock: no handler for ${channel}`));
     },
     onStateChanged: () => () => {},
+    onUpdateEvent: () => () => {},
   };
 }
