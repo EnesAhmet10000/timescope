@@ -49,6 +49,8 @@ export class Tracker {
   private session: OpenSession | null = null;
   private idle: OpenIdle | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
+  /** Timestamp of the last poll tick — the heartbeat the watchdog checks. */
+  private lastPollTs = 0;
   /** Called after each poll with the current foreground info (used by focus mode). */
   onActivity: ((info: ForegroundInfo | null) => void) | null = null;
 
@@ -61,6 +63,7 @@ export class Tracker {
 
   start(): void {
     if (this.timer) return;
+    this.lastPollTs = this.deps.now();
     this.timer = setInterval(() => this.safePoll(), POLL_MS);
     this.safePoll();
   }
@@ -73,9 +76,29 @@ export class Tracker {
     if (!this.timer) this.start();
   }
 
-  /** True while the poll loop is active — used by the health watchdog. */
+  /**
+   * Force-recreate the poll timer unconditionally. Unlike ensureRunning(), this
+   * also recovers a timer that still *exists* but has stopped firing — which can
+   * happen after the OS freezes timers across sleep/modern-standby. The stored
+   * handle stays non-null in that case, so only tearing it down and recreating
+   * it revives tracking.
+   */
+  restartPolling(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    this.start();
+  }
+
+  /** True while the poll loop handle exists — used by the health watchdog. */
   isRunning(): boolean {
     return this.timer !== null;
+  }
+
+  /** Milliseconds since the last poll tick. Large values mean a stalled loop. */
+  msSinceLastPoll(now: number): number {
+    return now - this.lastPollTs;
   }
 
   stop(): void {
@@ -89,6 +112,7 @@ export class Tracker {
   }
 
   private safePoll(): void {
+    this.lastPollTs = this.deps.now();
     try {
       this.poll();
     } catch (err) {

@@ -135,27 +135,36 @@ async function main(): Promise<void> {
   powerMonitor.on('lock-screen', () => tracker.forceIdle('locked'));
   powerMonitor.on('unlock-screen', () => {
     tracker.resumeFromForcedIdle();
-    tracker.ensureRunning();
+    tracker.restartPolling();
   });
   powerMonitor.on('suspend', () => tracker.forceIdle('suspend'));
   powerMonitor.on('resume', () => {
-    logInfo('system resume — resuming tracking');
+    logInfo('system resume — restarting tracking loop');
     tracker.resumeFromForcedIdle();
-    tracker.ensureRunning();
+    tracker.restartPolling();
   });
   powerMonitor.on('shutdown', () => tracker.stop());
 
   applyRetention(db, settings.get().retentionDays, Date.now());
   setInterval(() => applyRetention(db, settings.get().retentionDays, Date.now()), 6 * 3_600_000);
 
-  // Health watchdog: if the poll loop is ever found stopped while tracking is
-  // enabled, restart it. Cheap insurance against a wedged tracker.
-  setInterval(() => {
-    if (!settings.get().trackingPaused && !tracker.isRunning()) {
-      logError('watchdog: tracker was not running — restarting it');
-      tracker.ensureRunning();
+  // Health watchdog: recover a stalled tracker. Checks a heartbeat rather than
+  // just whether the timer handle exists, because the OS can freeze timers
+  // across sleep so the handle stays set but never fires again (the cause of
+  // tracking silently stopping for hours). If no poll has run recently while
+  // tracking is enabled, force-recreate the loop.
+  const WATCHDOG_STALL_MS = 30_000;
+  const reviveIfStalled = (): void => {
+    if (settings.get().trackingPaused) return;
+    if (!tracker.isRunning() || tracker.msSinceLastPoll(Date.now()) > WATCHDOG_STALL_MS) {
+      logError(`watchdog: tracker stalled (${Math.round(tracker.msSinceLastPoll(Date.now()) / 1000)}s since last poll) — restarting loop`);
+      tracker.restartPolling();
     }
-  }, 60_000);
+  };
+  setInterval(reviveIfStalled, 15_000);
+  // Opening or focusing the dashboard is a strong signal the machine is awake:
+  // revive tracking immediately so the user always sees current data.
+  app.on('browser-window-focus', reviveIfStalled);
 
   tracker.start();
   createWindow();

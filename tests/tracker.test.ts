@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Tracker, MERGE_GAP_MS } from '../src/main/tracker';
 import { makeCtx, type TestCtx } from './helpers';
 import type { ForegroundInfo } from '../src/main/win32';
@@ -196,6 +196,31 @@ describe('Tracker', () => {
     expect(i[0]!.end_ts).toBeGreaterThan(i[0]!.start_ts);
     // Tracking resumed: a new session is being recorded after the missed resume.
     expect(sessions(ctx).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('reports a heartbeat and force-restarts a stalled poll loop', () => {
+    vi.useFakeTimers();
+    try {
+      const ctx = makeCtx();
+      const { tracker, state } = makeTracker(ctx);
+      expect(tracker.isRunning()).toBe(false);
+      tracker.start();
+      expect(tracker.isRunning()).toBe(true);
+      // Heartbeat is fresh immediately after the initial poll.
+      expect(tracker.msSinceLastPoll(state.now)).toBe(0);
+      // Simulate the timer freezing: clock advances but no poll runs.
+      state.now += 45_000;
+      expect(tracker.msSinceLastPoll(state.now)).toBe(45_000);
+      // Force-restart revives the loop and refreshes the heartbeat, even though
+      // the timer handle was still present (the frozen-timer wedge).
+      tracker.restartPolling();
+      expect(tracker.isRunning()).toBe(true);
+      expect(tracker.msSinceLastPoll(state.now)).toBe(0);
+      tracker.stop();
+      expect(tracker.isRunning()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('MERGE_GAP_MS bounds the merge window', () => {
