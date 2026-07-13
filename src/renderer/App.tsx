@@ -31,10 +31,24 @@ function applyTheme(theme: Theme): void {
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
 }
 
+// Remember the last range the user looked at so opening the app always lands on
+// the data they care about — not an empty "Today" first thing in the morning.
+// Defaults to the last 7 days for a fresh install so all recent data is visible.
+const PERSISTED_VIEWS: View[] = ['today', 'yesterday', '7d', '30d'];
+function initialView(): View {
+  try {
+    const saved = localStorage.getItem('ts.view') as View | null;
+    if (saved && PERSISTED_VIEWS.includes(saved)) return saved;
+  } catch {
+    // localStorage unavailable — fall through to default
+  }
+  return '7d';
+}
+
 export default function App() {
   const [page, setPage] = useState<Page>('overview');
-  const [view, setView] = useState<View>('today');
-  const [range, setRange] = useState<Range>(() => getRange('today'));
+  const [view, setView] = useState<View>(initialView);
+  const [range, setRange] = useState<Range>(() => getRange(initialView()));
   const [settings, setSettings] = useState<Settings | null>(null);
   const [settingsBump, setSettingsBump] = useState(0);
 
@@ -70,6 +84,13 @@ export default function App() {
   const onRange = (v: View, r: Range): void => {
     setView(v);
     setRange(r);
+    if (v !== 'custom') {
+      try {
+        localStorage.setItem('ts.view', v);
+      } catch {
+        // ignore persistence failures
+      }
+    }
   };
   useEffect(() => {
     const t = setInterval(() => {
