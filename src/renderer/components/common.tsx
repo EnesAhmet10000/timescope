@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { fromDateInputValue, getRange, toDateInputValue, type View } from '../api';
 import { useT } from '../i18n';
 import type { Range } from '../../shared/types';
@@ -156,16 +156,40 @@ export function RangePicker(props: { view: View; range: Range; onChange: (view: 
 /** Poll-based data hook: refetches when deps change and every `intervalMs`. */
 export function usePolled<T>(fetcher: () => Promise<T>, deps: unknown[], intervalMs = 15000): T | null {
   const [data, setData] = useState<T | null>(null);
+  const requestId = useRef(0);
   const load = useCallback(() => {
+    const id = ++requestId.current;
     fetcher()
-      .then(setData)
+      .then((value) => {
+        // A range change can leave an older IPC request in flight. Never let
+        // that stale result overwrite the newer range's dashboard data.
+        if (id === requestId.current) setData(value);
+      })
       .catch((err) => console.error(err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   useEffect(() => {
     load();
     const t = setInterval(load, intervalMs);
-    return () => clearInterval(t);
+    let lastActivationRefresh = 0;
+    const refreshWhenVisible = (): void => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      // Showing a hidden Electron window can emit both visibilitychange and
+      // focus. Coalesce them into one immediate refresh per data hook.
+      if (now - lastActivationRefresh < 250) return;
+      lastActivationRefresh = now;
+      load();
+    };
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      // Ignore any request that resolves after a dependency change/unmount.
+      requestId.current += 1;
+    };
   }, [load, intervalMs]);
   return data;
 }

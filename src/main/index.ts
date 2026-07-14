@@ -24,6 +24,7 @@ const isSmoke = process.env.TIMESCOPE_SMOKE === '1';
 
 let win: BrowserWindow | null = null;
 let quitting = false;
+let restarting = false;
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -191,17 +192,16 @@ async function main(): Promise<void> {
 
 /** Cleanly flush + relaunch the app (used by the tray and the dashboard). */
 function restartApp(): void {
-  logInfo('restart requested');
-  try {
-    tracker.stop();
-    extServer.stop();
-    db.close();
-  } catch (err) {
-    logError('error during restart shutdown', err);
-  }
+  if (restarting) return;
+  restarting = true;
   quitting = true;
+  logInfo('restart requested');
+
+  // app.quit() runs the shared will-quit cleanup, which stops tracking, closes
+  // the database, and releases the extension server before the new process
+  // starts. The relaunched process then opens a fresh database connection.
   app.relaunch();
-  app.exit(0);
+  app.quit();
 }
 
 function applySettingsSideEffects(before: Settings, after: Settings): void {

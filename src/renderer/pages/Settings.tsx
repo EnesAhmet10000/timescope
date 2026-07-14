@@ -401,6 +401,8 @@ export function SettingsPage(props: { onSettingsChanged: () => void }) {
 
       <div className="row-sub" style={{ marginTop: 18 }}>
         {t('settings.footer', { v: info?.version ?? '…' })}
+        <br />
+        {'© 2026 EnesAhmet10000 · MIT License'}
       </div>
 
       {confirm ? (

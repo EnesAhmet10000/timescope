@@ -1,10 +1,10 @@
 {
   "name": "timescope",
   "productName": "TimeScope",
-  "description": "Privacy-first automatic time tracking for macOS. All data stays local.",
-  "version": "0.4.2",
+  "version": "0.4.3",
+  "description": "Privacy-first automatic time tracking for Windows and macOS. All data stays local.",
   "main": "dist/main/index.js",
-  "author": "TimeScope",
+  "author": "EnesAhmet10000",
   "license": "MIT",
   "private": true,
   "scripts": {
