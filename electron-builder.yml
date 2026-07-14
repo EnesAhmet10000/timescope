@@ -1,6 +1,9 @@
-appId: com.enesahmet10000.timescope
+# appId must stay com.timescope.desktop: every existing Windows install
+# (v0.1.0+) is registered under it, and changing it would make updates install
+# side-by-side instead of upgrading in place. macOS uses it as the bundle id.
+appId: com.timescope.desktop
 productName: TimeScope
-copyright: TimeScope
+copyright: Copyright © 2026 EnesAhmet10000
 artifactName: TimeScope-${version}-${arch}.${ext}
 
 directories:
@@ -19,6 +22,16 @@ asarUnpack:
 extraResources:
   - from: assets
     to: assets
+
+win:
+  target:
+    - nsis
+  icon: assets/icon.png
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  runAfterFinish: true
 
 mac:
   target:

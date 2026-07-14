@@ -16,7 +16,8 @@
     "test": "vitest run",
     "start": "npm run build && electron .",
     "smoke": "node scripts/smoke.mjs",
-    "dist": "npm run build && electron-builder --mac dmg --arm64",
+    "dist": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac dmg --arm64",
     "dist:mac": "npm run dist"
   },
   "dependencies": {
