@@ -1,7 +1,7 @@
 {
   "name": "timescope",
   "productName": "TimeScope",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Privacy-first automatic time tracking for Windows and macOS. All data stays local.",
   "main": "dist/main/index.js",
   "author": "EnesAhmet10000",

@@ -3,6 +3,7 @@
  * extension endpoint and the dashboard window together.
  */
 import { app, BrowserWindow, Notification, powerMonitor, shell } from 'electron';
+import fs from 'node:fs';
 import path from 'node:path';
 import { openDb, type Db } from './db';
 import { SettingsStore } from './settings';
@@ -52,7 +53,17 @@ async function main(): Promise<void> {
     ? path.join(app.getPath('temp'), `timescope-smoke-${Date.now()}.db`)
     : path.join(app.getPath('userData'), 'timescope.db');
   try {
+    // A relaunch (Restart button / in-place update) can start this process
+    // while the previous one is still flushing its final close. Opening
+    // mid-flush risks loading a torn snapshot of the file, which then looks
+    // like "missing history". Wait until the file stops changing first.
+    if (!isSmoke) await waitForStableFile(dbPath);
     db = openDb(dbPath);
+    if (!isSmoke) {
+      const n = db.get<{ c: number }>('SELECT COUNT(*) AS c FROM sessions')?.c ?? 0;
+      logInfo(`database opened: ${n} sessions on disk`);
+      backupDatabase(dbPath);
+    }
   } catch (err) {
     logError('failed to open database', err);
     throw err;
@@ -188,6 +199,64 @@ async function main(): Promise<void> {
   });
 
   if (isSmoke) void runSmoke();
+}
+
+/**
+ * Wait until the database file's size/mtime stop changing (two identical stats
+ * in a row), so we never load a snapshot torn by the previous process's final
+ * flush. Returns quickly in the normal case; gives up after ~3 s and proceeds.
+ */
+async function waitForStableFile(filePath: string): Promise<void> {
+  const statOf = (): string | null => {
+    try {
+      const s = fs.statSync(filePath);
+      return `${s.size}:${s.mtimeMs}`;
+    } catch {
+      return null; // no file yet — nothing to wait for
+    }
+  };
+  let prev = statOf();
+  if (prev === null) return;
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 150));
+    const cur = statOf();
+    if (cur === prev) return;
+    logInfo('database file still changing on open — waiting for previous instance to finish');
+    prev = cur;
+  }
+}
+
+const BACKUP_KEEP = 5;
+const BACKUP_MIN_AGE_MS = 12 * 3_600_000;
+
+/**
+ * Rotating on-boot backup: copy the database into <userData>/backups at most
+ * every 12 h, keeping the newest BACKUP_KEEP copies. Every write is persisted
+ * to the main file as it happens, so a plain file copy is a consistent
+ * snapshot — cheap insurance that history can always be recovered.
+ */
+function backupDatabase(dbPath: string): void {
+  try {
+    const dir = path.join(app.getPath('userData'), 'backups');
+    fs.mkdirSync(dir, { recursive: true });
+    const existing = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith('timescope-') && f.endsWith('.db'))
+      .sort();
+    const newest = existing[existing.length - 1];
+    if (newest) {
+      const age = Date.now() - fs.statSync(path.join(dir, newest)).mtimeMs;
+      if (age < BACKUP_MIN_AGE_MS) return;
+    }
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-');
+    fs.copyFileSync(dbPath, path.join(dir, `timescope-${stamp}.db`));
+    for (const f of existing.slice(0, Math.max(0, existing.length + 1 - BACKUP_KEEP))) {
+      fs.rmSync(path.join(dir, f), { force: true });
+    }
+    logInfo(`database backup written (${existing.length + 1 > BACKUP_KEEP ? BACKUP_KEEP : existing.length + 1} kept)`);
+  } catch (err) {
+    logError('backup failed (non-fatal)', err);
+  }
 }
 
 /** Cleanly flush + relaunch the app (used by the tray and the dashboard). */
