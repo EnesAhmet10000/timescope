@@ -1,4 +1,5 @@
 # TimeScope 🕒
+<img width="1908" height="989" alt="image" src="https://github.com/user-attachments/assets/c48df73c-4de8-436d-b93d-2b3d60bb4407" />
 
 **A free, open-source, privacy-first automatic time tracker for Windows 10/11 and macOS — all your time-tracking data stays 100% local, with no cloud, no account, and no telemetry.**
 
