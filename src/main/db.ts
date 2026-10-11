@@ -1,13 +1,15 @@
 /**
- * Local SQLite database (node-sqlite3-wasm: WASM SQLite with real file
- * persistence — no native compilation, identical behaviour in Electron and
- * in the Node test runner). All data stays on this machine.
+ * SQLite's native OS locks are released on process exit, including crashes.
+ * The existing SQLite file and schema remain compatible; no history is reset.
  */
-import { Database } from 'node-sqlite3-wasm';
+import { DatabaseSync } from 'node:sqlite';
+import fs from 'node:fs';
+import path from 'node:path';
 
 export type SqlValue = number | string | null | bigint | Uint8Array | boolean;
 
 export interface Db {
+  readonly lastWriteTs: number | null;
   run(sql: string, params?: SqlValue[]): { changes: number; lastInsertRowid: number };
   get<T = Record<string, unknown>>(sql: string, params?: SqlValue[]): T | undefined;
   all<T = Record<string, unknown>>(sql: string, params?: SqlValue[]): T[];
@@ -104,25 +106,51 @@ const MIGRATIONS: string[] = [
 ];
 
 class SqliteDb implements Db {
-  private db: Database;
+  private db: DatabaseSync;
+  lastWriteTs: number | null = null;
 
   constructor(filePath: string) {
-    this.db = new Database(filePath);
-    this.exec('PRAGMA journal_mode = WAL;');
-    this.exec('PRAGMA foreign_keys = ON;');
+    // Older WASM releases do not participate in SQLite's OS locking. Never
+    // ignore or remove their lock: an older instance might still be writing.
+    if (filePath !== ':memory:' && fs.existsSync(`${filePath}.lock`)) {
+      throw new Error('An older TimeScope database lock exists. Close all older TimeScope copies before retrying. If the lock remains, preserve it for manual recovery; no data has been reset.');
+    }
+    const existing = filePath !== ':memory:' && fs.existsSync(filePath) && fs.statSync(filePath).size > 0;
+    this.db = new DatabaseSync(filePath);
+    try {
+      this.exec('PRAGMA busy_timeout = 1000;');
+      if (existing) {
+        const result = this.db.prepare('PRAGMA quick_check').all();
+        if (result.some((row) => row.quick_check !== 'ok')) throw new Error('Database integrity check failed. Original data has been preserved.');
+        // VACUUM INTO includes committed WAL data, unlike copying only .db.
+        // Never overwrite this first, pre-migration snapshot.
+        const dir = path.join(path.dirname(filePath), 'backups');
+        fs.mkdirSync(dir, { recursive: true });
+        const backup = path.join(dir, `${path.basename(filePath)}.pre-native.db`);
+        if (!fs.existsSync(backup)) snapshotDatabase(this, backup);
+        verifySnapshot(backup);
+      }
+      this.exec('PRAGMA journal_mode = WAL;');
+      this.exec('PRAGMA synchronous = FULL;');
+      this.exec('PRAGMA foreign_keys = ON;');
+    } catch (err) {
+      this.db.close();
+      throw err;
+    }
   }
 
   run(sql: string, params: SqlValue[] = []): { changes: number; lastInsertRowid: number } {
-    const r = this.db.run(sql, params as never);
-    return { changes: r.changes ?? 0, lastInsertRowid: Number(r.lastInsertRowid ?? 0) };
+    const r = this.db.prepare(sql).run(...bind(params));
+    this.lastWriteTs = Date.now();
+    return { changes: Number(r.changes ?? 0), lastInsertRowid: Number(r.lastInsertRowid ?? 0) };
   }
 
   get<T = Record<string, unknown>>(sql: string, params: SqlValue[] = []): T | undefined {
-    return this.db.get(sql, params as never) as T | undefined;
+    return this.db.prepare(sql).get(...bind(params)) as T | undefined;
   }
 
   all<T = Record<string, unknown>>(sql: string, params: SqlValue[] = []): T[] {
-    return this.db.all(sql, params as never) as T[];
+    return this.db.prepare(sql).all(...bind(params)) as T[];
   }
 
   exec(sql: string): void {
@@ -130,6 +158,7 @@ class SqliteDb implements Db {
   }
 
   transaction<T>(fn: () => T): T {
+    const lastWriteBefore = this.lastWriteTs;
     this.exec('BEGIN');
     try {
       const result = fn();
@@ -141,6 +170,7 @@ class SqliteDb implements Db {
       } catch {
         // ignore rollback failure; original error matters more
       }
+      this.lastWriteTs = lastWriteBefore;
       throw err;
     }
   }
@@ -152,8 +182,33 @@ class SqliteDb implements Db {
 
 export function openDb(filePath: string): Db {
   const db = new SqliteDb(filePath);
-  migrate(db);
-  return db;
+  try {
+    migrate(db);
+    return db;
+  } catch (err) {
+    db.close();
+    throw err;
+  }
+}
+
+function bind(params: SqlValue[]) {
+  return params.map((value) => typeof value === 'boolean' ? Number(value) : value);
+}
+
+/** A consistent SQLite snapshot, including WAL; fails if destination exists. */
+export function snapshotDatabase(db: Db, destination: string): void {
+  db.exec(`VACUUM main INTO '${destination.replace(/'/g, "''")}'`);
+  verifySnapshot(destination);
+}
+
+function verifySnapshot(filePath: string): void {
+  if (fs.statSync(filePath).size < 100) throw new Error('Incomplete backup snapshot. Preserve it for manual recovery before retrying.');
+  const snapshot = new DatabaseSync(filePath, { readOnly: true });
+  try {
+    if (snapshot.prepare('PRAGMA quick_check').all().some((row) => row.quick_check !== 'ok')) {
+      throw new Error('Backup snapshot integrity check failed. Original history has not been reset.');
+    }
+  } finally { snapshot.close(); }
 }
 
 export function migrate(db: Db): void {

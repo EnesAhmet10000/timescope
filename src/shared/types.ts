@@ -159,7 +159,9 @@ export interface DayBucket {
 
 export interface TrackingStatus {
   paused: boolean;
-  state: 'active' | 'idle' | 'stopped';
+  state: 'active' | 'idle' | 'stopped' | 'error';
+  error?: string | null;
+  lastSavedTs?: number | null;
   currentExe: string | null;
   currentTitle: string | null;
   sinceTs: number | null;

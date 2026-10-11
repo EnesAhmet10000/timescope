@@ -1,7 +1,7 @@
 {
   "name": "timescope",
   "productName": "TimeScope",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Privacy-first automatic time tracking for Windows and macOS. All data stays local.",
   "main": "dist/main/index.js",
   "author": "EnesAhmet10000",
@@ -17,12 +17,10 @@
     "start": "npm run build && electron .",
     "smoke": "node scripts/smoke.mjs",
     "dist": "npm run build && electron-builder --win",
-    "dist:mac": "npm run build && electron-builder --mac dmg --arm64",
-    "dist:mac": "npm run dist"
+    "dist:mac": "npm run build && electron-builder --mac dmg --arm64"
   },
   "dependencies": {
-    "koffi": "^2.9.0",
-    "node-sqlite3-wasm": "^0.8.35"
+    "koffi": "^2.9.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
@@ -37,6 +35,10 @@
     "recharts": "^2.15.0",
     "typescript": "^5.8.0",
     "vite": "^6.3.0",
-    "vitest": "^3.1.0"
+    "vitest": "^3.1.0",
+    "node-sqlite3-wasm": "^0.8.35"
+  },
+  "engines": {
+    "node": ">=22.13.0"
   }
 }

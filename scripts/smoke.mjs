@@ -11,9 +11,9 @@ import { createRequire } from 'node:module';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // The electron package exports the path to electron.exe when required from Node.
-const electronBin = createRequire(import.meta.url)('electron');
+const electronBin = process.env.TIMESCOPE_SMOKE_PACKAGED || createRequire(import.meta.url)('electron');
 
-const child = spawn(electronBin, ['.', '--hidden'], {
+const child = spawn(electronBin, process.env.TIMESCOPE_SMOKE_PACKAGED ? ['--hidden'] : ['.', '--hidden'], {
   cwd: root,
   env: { ...process.env, TIMESCOPE_SMOKE: '1' },
 });
@@ -43,10 +43,13 @@ child.on('exit', () => {
   // Machine in use -> sessions recorded; machine idle -> idle period recorded.
   const activeOk = result.summary.activeMs > 3000 && result.apps.length >= 1;
   const idleOk = result.status.state === 'idle' && result.summary.idleMs > 3000;
-  const ok = activeOk || idleOk;
+  const failureMode = process.env.TIMESCOPE_SMOKE_WRITE_FAILURE === '1';
+  const ok = result.renderer?.loaded && (failureMode
+    ? result.status.state === 'error' && result.renderer.recordingAlert
+    : (activeOk || idleOk) && !result.renderer.recordingAlert);
   console.log(ok ? 'SMOKE PASS' : 'SMOKE FAIL: nothing recorded');
   console.log(
-    activeOk
+    failureMode ? 'recording failure is visible in the rendered dashboard' : activeOk
       ? `recorded active app(s): ${result.apps.map((a) => a.exeName).join(', ')}`
       : `machine was idle (${result.idleSec}s since input) — idle period recorded correctly`,
   );

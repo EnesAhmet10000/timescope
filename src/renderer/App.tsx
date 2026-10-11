@@ -51,14 +51,16 @@ export default function App() {
   const [range, setRange] = useState<Range>(() => getRange(initialView()));
   const [settings, setSettings] = useState<Settings | null>(null);
   const [settingsBump, setSettingsBump] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadSettings = useCallback(() => {
     void invoke('settings:get').then((s) => {
       setSettings(s);
+      setLoadError(null);
       applyTheme(s.theme);
       document.documentElement.dir = dirFor(s.language);
       document.documentElement.lang = s.language;
-    });
+    }).catch((error: unknown) => setLoadError(error instanceof Error ? error.message : String(error)));
   }, []);
 
   useEffect(() => {
@@ -73,7 +75,10 @@ export default function App() {
     };
   }, [loadSettings, settingsBump]);
 
-  const status = usePolled(() => invoke('tracking:status'), [settingsBump], 5000);
+  const status = usePolled(() => invoke('tracking:status').catch(() => ({
+    paused: false, state: 'error' as const, error: 'Recording status unavailable',
+    lastSavedTs: null, currentExe: null, currentTitle: null, sinceTs: null,
+  })), [settingsBump], 5000);
 
   const toggleTracking = (): void => {
     const paused = status?.paused ?? false;
@@ -99,7 +104,11 @@ export default function App() {
     return () => clearInterval(t);
   }, [view]);
 
-  if (!settings) return null;
+  if (!settings) return <main className="main" role={loadError ? 'alert' : 'status'}>
+    <h1>TimeScope</h1>
+    <p>{loadError ? 'TimeScope could not load your settings. Recording status is unavailable. Your history has not been reset.' : 'Loading TimeScope…'}</p>
+    {loadError ? <button className="btn" onClick={loadSettings}>Retry</button> : null}
+  </main>;
   if (!settings.onboardingDone) {
     return (
       <I18nProvider lang={settings.language}>
@@ -136,19 +145,25 @@ export default function App() {
           <div className="sidebar-footer">
             <button
               type="button"
-              className={`tracking-toggle ${status?.paused ? 'paused' : status?.state === 'idle' ? 'idle' : 'on'}`}
+              className={`tracking-toggle ${!status || status.state === 'error' ? 'paused' : status.paused ? 'paused' : status.state === 'idle' ? 'idle' : 'on'}`}
               onClick={toggleTracking}
               title={status?.paused ? t('track.titlePaused') : t('track.titleOn')}
             >
               <span className="dot" />
               <span className="tt-text">
-                {status?.paused ? t('track.off') : status?.state === 'idle' ? t('track.idle') : t('track.on')}
+                {!status ? t('track.checking') : status.state === 'error' ? t('track.error') : status.paused ? t('track.off') : status.state === 'idle' ? t('track.idle') : t('track.on')}
               </span>
               <span className="tt-action">{status?.paused ? t('track.resume') : t('track.pause')}</span>
             </button>
           </div>
         </nav>
         <main className="main">
+          {status?.state === 'error' ? <div className="recording-alert" role="alert">
+            <strong>{t('track.error')}</strong>
+            <p>{t('track.errorDetail')}</p>
+            <p>{t('track.lastSaved')}: {status.lastSavedTs ? new Date(status.lastSavedTs).toLocaleString(settings.language) : t('track.unknown')}</p>
+            <button className="btn" onClick={() => void invoke('system:restart')}>{t('track.retry')}</button>
+          </div> : null}
           {page === 'overview' ? <Overview {...rangeProps} /> : null}
           {page === 'timeline' ? <Timeline {...rangeProps} /> : null}
           {page === 'applications' ? <Applications {...rangeProps} /> : null}

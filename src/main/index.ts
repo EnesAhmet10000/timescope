@@ -2,10 +2,11 @@
  * TimeScope main process: wires database, tracker, tray, focus manager,
  * extension endpoint and the dashboard window together.
  */
-import { app, BrowserWindow, Notification, powerMonitor, shell } from 'electron';
+import { app, BrowserWindow, Notification, powerMonitor, shell, dialog } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
-import { openDb, type Db } from './db';
+import { openDb, snapshotDatabase, type Db } from './db';
+import { cleanupAll } from './lifecycle';
 import { SettingsStore } from './settings';
 import { Catalog } from './catalog';
 import { Tracker } from './tracker';
@@ -22,6 +23,8 @@ import type { Settings } from '../shared/types';
 
 const isDev = !app.isPackaged && !!process.env.VITE_DEV_SERVER_URL;
 const isSmoke = process.env.TIMESCOPE_SMOKE === '1';
+// A smoke run must never share the live application's profile or instance lock.
+if (isSmoke) app.setPath('userData', fs.mkdtempSync(path.join(app.getPath('temp'), 'timescope-smoke-profile-')));
 
 let win: BrowserWindow | null = null;
 let quitting = false;
@@ -32,7 +35,7 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', () => showWindow());
-  void main();
+  void main().catch(handleStartupFailure);
 }
 
 let db: Db;
@@ -43,6 +46,30 @@ let focus: FocusManager;
 let extServer: ExtensionServer;
 let tray: TrayController;
 let updater: Updater;
+let ready = false;
+
+app.on('before-quit', () => { quitting = true; });
+app.on('will-quit', () => cleanupAll([
+  () => tracker?.stop(),
+  () => extServer?.stop(),
+  () => db?.close(),
+  () => tray?.destroy(),
+], (err) => logError('shutdown error', err)));
+
+async function handleStartupFailure(err: unknown): Promise<void> {
+  logError('startup failed — recording is stopped', err);
+  if (isSmoke) { console.error(err); app.exit(1); return; }
+  const message = err instanceof Error ? err.message : String(err);
+  const { response } = await dialog.showMessageBox({
+    type: 'error', title: 'TimeScope — recording stopped',
+    message: 'TimeScope could not start recording. Your history has not been reset.',
+    detail: `${message}\n\nClose any older TimeScope copies and retry. Do not delete your database.\nData folder: ${app.getPath('userData')}`,
+    buttons: ['Retry', 'Open data folder', 'Quit'], defaultId: 0, cancelId: 2,
+  });
+  if (response === 1) await shell.openPath(app.getPath('userData'));
+  if (response === 0) restartApp();
+  else app.quit();
+}
 
 async function main(): Promise<void> {
   await app.whenReady();
@@ -69,6 +96,7 @@ async function main(): Promise<void> {
     throw err;
   }
   settings = new SettingsStore(db);
+  if (isSmoke) settings.update({ onboardingDone: true, language: process.env.TIMESCOPE_SMOKE_LANGUAGE === 'ar' ? 'ar' : process.env.TIMESCOPE_SMOKE_LANGUAGE === 'tr' ? 'tr' : 'en' });
   catalog = new Catalog(db);
   focus = new FocusManager(db);
   focus.notify = (title, body) => {
@@ -107,6 +135,7 @@ async function main(): Promise<void> {
 
   tray = new TrayController({
     isPaused: () => settings.get().trackingPaused,
+    hasError: () => tracker.status().state === 'error',
     setPaused: (paused) => {
       const before = settings.get();
       const after = settings.update({ trackingPaused: paused });
@@ -123,6 +152,17 @@ async function main(): Promise<void> {
     },
   });
   tray.create();
+  tracker.onHealthChanged = (error) => {
+    tray.refresh();
+    win?.webContents.send('state-changed');
+    if (error) {
+      logError('recording failed', error);
+      if (!isSmoke && Notification.isSupported()) new Notification({
+        title: 'TimeScope — recording stopped',
+        body: 'Activity could not be saved. Open TimeScope to check the last successful save.',
+      }).show();
+    } else logInfo('recording recovered');
+  };
 
   registerIpc({
     db,
@@ -178,25 +218,15 @@ async function main(): Promise<void> {
   // revive tracking immediately so the user always sees current data.
   app.on('browser-window-focus', reviveIfStalled);
 
+  if (isSmoke && process.env.TIMESCOPE_SMOKE_WRITE_FAILURE === '1') db.exec('PRAGMA query_only = ON');
   tracker.start();
+  ready = true;
   createWindow();
 
   app.on('window-all-closed', () => {
     // Keep running in the tray; do not quit.
   });
   app.on('activate', () => showWindow());
-  app.on('before-quit', () => {
-    quitting = true;
-  });
-  app.on('will-quit', () => {
-    try {
-      tracker.stop();
-      extServer.stop();
-      db.close();
-    } catch (err) {
-      logError('shutdown error', err);
-    }
-  });
 
   if (isSmoke) void runSmoke();
 }
@@ -230,10 +260,8 @@ const BACKUP_KEEP = 5;
 const BACKUP_MIN_AGE_MS = 12 * 3_600_000;
 
 /**
- * Rotating on-boot backup: copy the database into <userData>/backups at most
- * every 12 h, keeping the newest BACKUP_KEEP copies. Every write is persisted
- * to the main file as it happens, so a plain file copy is a consistent
- * snapshot — cheap insurance that history can always be recovered.
+ * Rotating on-boot SQLite snapshot (includes committed WAL records), at most
+ * every 12 h. The permanent pre-native upgrade snapshot is never rotated.
  */
 function backupDatabase(dbPath: string): void {
   try {
@@ -249,7 +277,9 @@ function backupDatabase(dbPath: string): void {
       if (age < BACKUP_MIN_AGE_MS) return;
     }
     const stamp = new Date().toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-');
-    fs.copyFileSync(dbPath, path.join(dir, `timescope-${stamp}.db`));
+    const destination = path.join(dir, `timescope-${stamp}.db`);
+    if (fs.existsSync(destination)) return;
+    snapshotDatabase(db, destination);
     for (const f of existing.slice(0, Math.max(0, existing.length + 1 - BACKUP_KEEP))) {
       fs.rmSync(path.join(dir, f), { force: true });
     }
@@ -324,6 +354,7 @@ function createWindow(): void {
 }
 
 function showWindow(): void {
+  if (!ready) return;
   if (!win) createWindow();
   else {
     if (win.isMinimized()) win.restore();
@@ -343,7 +374,15 @@ async function runSmoke(): Promise<void> {
     apps: analytics.byApp(db, range),
     status: tracker.status(),
     idleSec: powerMonitor.getSystemIdleTime(),
+    renderer: await win?.webContents.executeJavaScript(`({
+      loaded: Boolean(document.querySelector('.sidebar') && document.querySelector('.main')),
+      recordingAlert: Boolean(document.querySelector('.recording-alert[role="alert"]')),
+      rtl: document.documentElement.dir === 'rtl'
+    })`),
   };
+  if (win && process.env.TIMESCOPE_SMOKE_SCREENSHOT) {
+    fs.writeFileSync(process.env.TIMESCOPE_SMOKE_SCREENSHOT, (await win.webContents.capturePage()).toPNG());
+  }
   console.log('[smoke-result] ' + JSON.stringify(result));
   quitting = true;
   app.quit();

@@ -808,3 +808,6 @@ code.inline {
   font-size: 12px;
   user-select: all;
 }
+/* Recording failures remain visible above every dashboard page. */
+.recording-alert { border: 1px solid #ef6464; background: #511919; color: #fff; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+.recording-alert p { margin: 8px 0; }

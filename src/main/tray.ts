@@ -7,6 +7,7 @@ import path from 'node:path';
 
 export interface TrayCallbacks {
   isPaused: () => boolean;
+  hasError: () => boolean;
   setPaused: (paused: boolean) => void;
   openDashboard: () => void;
   openDataDir: () => void;
@@ -39,11 +40,12 @@ export class TrayController {
   refresh(): void {
     if (!this.tray) return;
     const paused = this.cb.isPaused();
-    this.tray.setImage(this.loadIcon(paused));
-    this.tray.setToolTip(paused ? 'TimeScope — tracking paused' : 'TimeScope — tracking active');
+    const error = this.cb.hasError();
+    this.tray.setImage(this.loadIcon(paused || error));
+    this.tray.setToolTip(error ? 'TimeScope — recording failed' : paused ? 'TimeScope — tracking paused' : 'TimeScope — tracking active');
     this.tray.setContextMenu(
       Menu.buildFromTemplate([
-        { label: paused ? '● Tracking is PAUSED' : '● Tracking is ON', enabled: false },
+        { label: error ? '● Recording FAILED — open dashboard' : paused ? '● Tracking is PAUSED' : '● Tracking is ON', enabled: false },
         { type: 'separator' },
         { label: 'Open Dashboard', click: () => this.cb.openDashboard() },
         paused

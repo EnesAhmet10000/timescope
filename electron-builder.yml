@@ -17,7 +17,6 @@ files:
 # Native/wasm modules must live outside the asar archive.
 asarUnpack:
   - node_modules/koffi/**
-  - node_modules/node-sqlite3-wasm/**
 
 extraResources:
   - from: assets

@@ -1,4 +1,16 @@
 # TimeScope 🕒
+
+### Reliability update — 0.4.5
+
+TimeScope now uses SQLite's operating-system locks so an interrupted process
+cannot leave a permanent directory lock. Existing history stays in the same local
+database. The first upgrade saves a permanent pre-migration snapshot; rotating
+backups include committed WAL records. Recording failures are visible in the tray
+and dashboard, and startup failures show a dialog instead of an empty window.
+
+Close all older copies before upgrading. Legacy `.db.lock` directories are never
+deleted automatically because an older instance might still be writing. Development
+requires Node.js 22.13 or newer. See [repair plan and verification](docs/RELIABILITY-REPAIR.md).
 <img width="1908" height="989" alt="image" src="https://github.com/user-attachments/assets/c48df73c-4de8-436d-b93d-2b3d60bb4407" />
 
 **A free, open-source, privacy-first automatic time tracker for Windows 10/11 and macOS — all your time-tracking data stays 100% local, with no cloud, no account, and no telemetry.**

@@ -51,6 +51,9 @@ export class Tracker {
   private timer: ReturnType<typeof setInterval> | null = null;
   /** Timestamp of the last poll tick — the heartbeat the watchdog checks. */
   private lastPollTs = 0;
+  private error: string | null = null;
+  private skipMerge = false;
+  onHealthChanged: ((error: string | null) => void) | null = null;
   /** Called after each poll with the current foreground info (used by focus mode). */
   onActivity: ((info: ForegroundInfo | null) => void) | null = null;
 
@@ -115,7 +118,19 @@ export class Tracker {
     this.lastPollTs = this.deps.now();
     try {
       this.poll();
+      if (this.error !== null) {
+        this.error = null;
+        this.onHealthChanged?.(null);
+      }
     } catch (err) {
+      // Resume from the next real observation, never fill an unrecorded gap.
+      this.session = null;
+      this.idle = null;
+      this.skipMerge = true;
+      const message = err instanceof Error ? err.message : String(err);
+      const firstFailure = this.error === null;
+      this.error = message;
+      if (firstFailure) this.onHealthChanged?.(message);
       console.error('[tracker] poll failed:', err);
     }
   }
@@ -193,7 +208,7 @@ export class Tracker {
       'SELECT id, start_ts, end_ts, title FROM sessions WHERE app_id = ? ORDER BY end_ts DESC LIMIT 1',
       [appId],
     );
-    if (prev && now - prev.end_ts >= 0 && now - prev.end_ts <= MERGE_GAP_MS) {
+    if (!this.skipMerge && prev && now - prev.end_ts >= 0 && now - prev.end_ts <= MERGE_GAP_MS) {
       this.session = {
         rowId: prev.id,
         appId,
@@ -211,6 +226,7 @@ export class Tracker {
       [appId, title, now, now],
     );
     this.session = { rowId: lastInsertRowid, appId, exeName: info.exeName, title, startTs: now, lastSeenTs: now };
+    this.skipMerge = false;
   }
 
   private closeSession(endTs: number): void {
@@ -269,7 +285,9 @@ export class Tracker {
     const paused = this.settings.get().trackingPaused;
     return {
       paused,
-      state: paused ? 'stopped' : this.idle ? 'idle' : 'active',
+      state: this.error ? 'error' : paused ? 'stopped' : this.idle ? 'idle' : 'active',
+      error: this.error,
+      lastSavedTs: this.db.lastWriteTs,
       currentExe: this.session?.exeName ?? null,
       currentTitle: this.session?.title ?? null,
       sinceTs: this.session?.startTs ?? this.idle?.startTs ?? null,

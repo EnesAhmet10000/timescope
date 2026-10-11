@@ -9,6 +9,10 @@ release-*/
 
 # Local data — never commit user activity data
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.db.lock/
 *.sqlite
 *.sqlite3
 Thumbs.db

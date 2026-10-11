@@ -6,9 +6,9 @@ const common = {
   bundle: true,
   platform: 'node',
   format: 'cjs',
-  target: 'node20',
+  target: 'node22',
   sourcemap: true,
-  external: ['electron', 'koffi', 'node-sqlite3-wasm'],
+  external: ['electron', 'koffi', 'node:sqlite'],
   logLevel: 'info',
 };
 

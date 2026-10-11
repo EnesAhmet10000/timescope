@@ -20,6 +20,12 @@ export function dirFor(lang: Language): 'ltr' | 'rtl' {
 type Dict = Record<string, string>;
 
 const en: Dict = {
+  "track.checking": "Checking recording…",
+  "track.error": "Recording stopped",
+  "track.errorDetail": "Activity could not be saved or recording status is unavailable. Time during this interruption may be missing.",
+  "track.lastSaved": "Last successful save",
+  "track.unknown": "Not available",
+  "track.retry": "Restart and retry",
   // nav
   'nav.overview': 'Overview',
   'nav.timeline': 'Timeline',
@@ -272,6 +278,12 @@ const en: Dict = {
 };
 
 const ar: Dict = {
+  "track.checking": "جارٍ التحقق من التسجيل…",
+  "track.error": "التسجيل متوقف",
+  "track.errorDetail": "تعذر حفظ النشاط أو التحقق من حالة التسجيل. قد لا يُسجّل الوقت خلال هذا الانقطاع.",
+  "track.lastSaved": "آخر حفظ ناجح",
+  "track.unknown": "غير متاح",
+  "track.retry": "إعادة التشغيل والمحاولة",
   'nav.overview': 'نظرة عامة',
   'nav.timeline': 'الخط الزمني',
   'nav.applications': 'التطبيقات',
@@ -508,6 +520,12 @@ const ar: Dict = {
 };
 
 const tr: Dict = {
+  "track.checking": "Kayıt kontrol ediliyor…",
+  "track.error": "Kayıt durdu",
+  "track.errorDetail": "Etkinlik kaydedilemedi veya kayıt durumu doğrulanamadı. Kesinti sırasında geçen süre eksik olabilir.",
+  "track.lastSaved": "Son başarılı kayıt",
+  "track.unknown": "Bilinmiyor",
+  "track.retry": "Yeniden başlat ve dene",
   'nav.overview': 'Genel Bakış',
   'nav.timeline': 'Zaman Çizelgesi',
   'nav.applications': 'Uygulamalar',
